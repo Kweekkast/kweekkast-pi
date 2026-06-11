@@ -15,3 +15,6 @@ class ImageCapturer(ICaptureTriggerObserver):
             raise ValueError("something went wrong. Image could not be captured")
         
         cv2.imwrite(StringGenerators.createImagePath(self._captureDeviceID),frame)
+
+    def __del__(self):
+        self._captureDevice.release()
