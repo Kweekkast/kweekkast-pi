@@ -15,4 +15,6 @@ class TimerTrigger(Abstract_Trigger):
 
             timeEnd = time.time()
             timeElapsed = timeEnd - timeBegin
+            if timeElapsed > self.timeSeconds:
+                timeElapsed = self.timeSeconds
             time.sleep(self.timeSeconds-timeElapsed)

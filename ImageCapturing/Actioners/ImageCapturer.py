@@ -6,12 +6,12 @@ class ImageCapturer(ICaptureTriggerObserver):
 
     def __init__(self, VideoCaptureDeviceID):
         self._captureDeviceID = VideoCaptureDeviceID
+        self._captureDevice = cv2.VideoCapture(self._captureDeviceID)
 
     def notify(self):
-        captureDevice = cv2.VideoCapture(self._captureDeviceID)
-        ret, frame = captureDevice.read()
+
+        ret, frame = self._captureDevice.read()
         if not ret:
             raise ValueError("something went wrong. Image could not be captured")
         
         cv2.imwrite(StringGenerators.createImagePath(self._captureDeviceID),frame)
-        captureDevice.release()
