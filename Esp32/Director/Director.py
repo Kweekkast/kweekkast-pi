@@ -24,7 +24,6 @@ class Director(Observer, ABC):
     def Notify(self) -> None:
         """Wordt aangeroepen door Communicator.NotifyAll() bij nieuwe Reading."""
         self.HandleReading(self.communicator.reading)
-        # self.SendMessage(self.communicator.reading)
 
     @abstractmethod
     def HandleReading(self, reading: Reading) -> None:
@@ -33,4 +32,4 @@ class Director(Observer, ABC):
 
     def SendMessage(self, message: str) -> None:
         """Stuur een commando terug naar het apparaat."""
-        self.transmitter.SendMessage(reading)
+        self.transmitter.SendMessage(message)
