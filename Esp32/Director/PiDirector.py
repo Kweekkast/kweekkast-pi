@@ -14,9 +14,10 @@ class PiDirector(Director):
     def __init__(self, communicator: "Communicator", transmitter: Transmitter):
         super().__init__(communicator, transmitter)
 
-    # def HandleReading(self, reading: Reading) -> None:
-    #     if reading.valid:
-    #         print(f"[PiDirector] Bericht ontvangen: {reading.message}")
-    #         # TODO: verwerk de data
-    #     else:
-    #         print(f"[PiDirector] Ongeldig bericht genegeerd: {reading.message}")
+    def HandleReading(self, reading: Reading) -> None:
+        if reading.valid:
+            print(f"[EspDirector] Bericht ontvangen: {reading.message}")
+            self.SendMessage(reading.message)
+        elif not reading.valid:
+    # TODO: error bericht eventueel maken
+            print(f"[EspDirector] Ongeldig bericht: {reading.message}")

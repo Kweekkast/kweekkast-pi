@@ -23,14 +23,14 @@ class Director(Observer, ABC):
 
     def Notify(self) -> None:
         """Wordt aangeroepen door Communicator.NotifyAll() bij nieuwe Reading."""
-        # self.HandleReading(self.communicator.reading)
-        self.SendMessage(self.communicator.reading)
+        self.HandleReading(self.communicator.reading)
+        # self.SendMessage(self.communicator.reading)
 
-    # @abstractmethod
-    # def HandleReading(self, reading: Reading) -> None:
-    #     """Verwerk de binnenkomende data."""
-    #     pass
+    @abstractmethod
+    def HandleReading(self, reading: Reading) -> None:
+        """Verwerk de binnenkomende data."""
+        pass
 
-    def SendMessage(self, reading: Reading) -> None:
+    def SendMessage(self, message: str) -> None:
         """Stuur een commando terug naar het apparaat."""
         self.transmitter.SendMessage(reading)

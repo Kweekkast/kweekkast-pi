@@ -4,6 +4,6 @@ from Esp32.Transmitter.Transmitter import Transmitter
 
 class WifiTransmitter(Transmitter):
 
-    def SendMessage(self, reading: Reading) -> None:
+    def SendMessage(self, message: str) -> None:
         # TODO: implementeer wifi verzenden
         pass

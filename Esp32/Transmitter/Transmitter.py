@@ -5,5 +5,5 @@ from Esp32.Reading import Reading
 class Transmitter(ABC):
 
     @abstractmethod
-    def SendMessage(self, reading: Reading) -> None:
+    def SendMessage(self, message: str) -> None:
         pass

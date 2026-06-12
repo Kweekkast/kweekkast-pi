@@ -14,10 +14,10 @@ class EspDirector(Director):
     def __init__(self, communicator: "Communicator", transmitter: Transmitter):
         super().__init__(communicator, transmitter)
 
-    # def HandleReading(self, reading: Reading) -> None:
-    #     if reading.valid:
-    #         print(f"[EspDirector] Bericht ontvangen: {reading.message}")
-    #         # TODO: verwerk de data, stuur eventueel een antwoord
-    #         self.SendMessage(Reading("ACK", True))
-    #     else:
-    #         print(f"[EspDirector] Ongeldig bericht genegeerd: {reading.message}")
+    def HandleReading(self, reading: Reading) -> None:
+        if reading.valid:
+            print(f"[EspDirector] Bericht ontvangen: {reading.message}")
+            self.SendMessage("ACK")
+        elif not reading.valid:
+            print(f"[EspDirector] Ongeldig bericht: {reading.message}")
+            self.SendMessage("NACK")
