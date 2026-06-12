@@ -7,7 +7,7 @@ from Esp32.Connection.Connection import Connection
 from Esp32.Subject import Subject
 
 if TYPE_CHECKING:
-    from Esp32.Director.Director import Director
+    from Esp32.Director.EspDirector import EspDirector
     from Esp32.Transmitter.Transmitter import Transmitter
 
 
@@ -17,7 +17,7 @@ class Communicator(Subject):
         super().__init__()
         self.connection = connection
         self.reading = Reading()
-        self.director: "Director | None" = None
+        self.director = EspDirector
 
         from Esp32.Receiver.Receiver import Receiver
         self.receiver = Receiver.CreateReceiver(self, connection)
@@ -28,10 +28,6 @@ class Communicator(Subject):
             daemon=True
         )
         self._receiverThread.start()
-
-    def Init(self, transmitter: "Transmitter", directorClass: type) -> None:
-        """Koppel een Director aan deze Communicator na aanmaken."""
-        self.director = directorClass(self, transmitter)
 
     def UpdateReading(self, message: str) -> None:
         self.reading = Reading(message, self.ValidateMessage(message))

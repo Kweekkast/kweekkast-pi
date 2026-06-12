@@ -11,8 +11,8 @@ from Esp32.Transmitter.Transmitter import Transmitter
 
 class PiDirector(Director):
 
-    def __init__(self, communicator: "Communicator", transmitter: Transmitter):
-        super().__init__(communicator, transmitter)
+    def __init__(self, communicator: "Communicator"):
+        super().__init__(communicator)
 
     def HandleReading(self, reading: Reading) -> None:
         if reading.valid:

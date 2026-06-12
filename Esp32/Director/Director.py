@@ -16,9 +16,9 @@ class Director(Observer, ABC):
     en kan commando's terugsturen via een Transmitter.
     """
 
-    def __init__(self, communicator: "Communicator", transmitter: Transmitter):
+    def __init__(self, communicator: "Communicator"):
         self.communicator = communicator
-        self.transmitter = transmitter
+        self.transmitter = Transmitter.CreateTransmitter(communicator.connection)
         communicator.Subscribe(self)  # registreer als observer
 
     def Notify(self) -> None:
