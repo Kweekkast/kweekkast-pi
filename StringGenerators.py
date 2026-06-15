@@ -5,11 +5,8 @@ def createImagePath(ImageCaptureDevice):
     return imagePath
 
 def fetchCustomDateString():
+    time_Format = "%Y-%m-%d %H-%M-%S-%f"
+    
     date = datetime.datetime.now()
-    customDatetimeString = (
-        str(date.strftime("%d")) + 
-        "_" + str(date.strftime("%m")) + 
-        "_" + str(date.strftime("%Y")) + 
-        "-" + str(date.strftime("%H")) + 
-        "_" + str(date.strftime("%M")))
-    return customDatetimeString
+    customDatetimeString = str(date.strftime(time_Format))
+    return str(customDatetimeString)

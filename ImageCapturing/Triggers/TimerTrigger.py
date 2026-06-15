@@ -1,4 +1,5 @@
 from ImageCapturing.Triggers.AbstractTrigger import Abstract_Trigger
+import StringGenerators
 import time
 
 class TimerTrigger(Abstract_Trigger):
@@ -8,6 +9,7 @@ class TimerTrigger(Abstract_Trigger):
         self.timeSeconds = timeSeconds
 
     def triggerLoop(self):
+        print(StringGenerators.fetchCustomDateString() + ": Timer Trigger: The triggerloop has started")
         while True:
             timeBegin = time.time()
 
