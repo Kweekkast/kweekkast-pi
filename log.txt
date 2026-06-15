@@ -1,0 +1,10 @@
+<function fetchCustomDateString at 0x0000017FE8573AB0>:DEV:File_Logger:this is a test message that should be logged in a file
+<function fetchCustomDateString at 0x0000017FE8573AB0>:ERROR:File_Logger:this is a test message that should be logged in a file
+<function fetchCustomDateString at 0x00000244E0373AB0>:DEV:File_Logger:this is a test message that should be logged in a file
+<function fetchCustomDateString at 0x00000244E0373AB0>:ERROR:File_Logger:this is a test message that should be logged in a file
+<function fetchCustomDateString at 0x000001E475C13AB0>:DEV:File_Logger:this is a test message that should be logged in a file
+<function fetchCustomDateString at 0x000001E475C13AB0>:ERROR:File_Logger:this is a test message that should be logged in a file
+2026-06-15 17-00-25:DEV:File_Logger:this is a test message that should be logged in a file
+2026-06-15 17-00-25:ERROR:File_Logger:this is a test message that should be logged in a file
+2026-06-15 17-01-18: DEV: File_Logger: this is a test message that should be logged in a file
+2026-06-15 17-01-18: ERROR: File_Logger: this is a test message that should be logged in a file
