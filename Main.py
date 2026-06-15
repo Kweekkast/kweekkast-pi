@@ -1,7 +1,7 @@
-
+from ImageCapturing.CameraComponentHandler import CameraComponentHandler
 from timeit import Timer
 from threading import Thread
-
+from ImageCapturing.CameraComponentHandler import CameraComponentHandler
 from ImageCapturing.Triggers.TimerTrigger import TimerTrigger
 from ImageCapturing.Triggers.Buttontrigger import ButtonTrigger
 from ImageCapturing.Actioners.ImageCapturer import ImageCapturer
@@ -18,12 +18,5 @@ imageCapturer2 = ImageCapturer(1)
 trigger.AddObserver(imageCapturer2)
 imageCapturer3 = ImageCapturer(2)
 trigger.AddObserver(imageCapturer3)
-
-
-
-
-
-
-
 
 
