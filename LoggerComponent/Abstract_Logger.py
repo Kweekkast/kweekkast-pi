@@ -1,4 +1,4 @@
-from LoggerComponent import StringFormatter
+import StringFormatter
 from abc import ABC, abstractmethod
 
 class Abstract_Logger(ABC):

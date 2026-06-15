@@ -14,3 +14,7 @@ def fetchCustomDateString():
 def FormatLogMessage(logSeverity, senderClass, msg):
         timestamp = fetchCustomDateString()
         return f"{timestamp}: {logSeverity.name}: {senderClass}: {msg}"
+
+SessionLogDirectoryPath = "logs/"
+SessionLogfileName = "log_session_" + fetchCustomDateString() + ".txt"
+SessionLogFilePath = SessionLogDirectoryPath + SessionLogfileName

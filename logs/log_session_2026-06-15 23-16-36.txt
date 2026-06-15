@@ -1,0 +1,4 @@
+2026-06-15 23-16-36: ERROR: File_Logger: Something went wrong: FileExistsError(17, 'Cannot create a file when that file already exists')
+2026-06-15 23-16-36: DEV: File_Logger: Successfully created file!
+2026-06-15 23-16-36: DEV: File_Logger: this is a test message that should be logged in a file
+2026-06-15 23-16-36: ERROR: File_Logger: this is a test message that should be logged in a file

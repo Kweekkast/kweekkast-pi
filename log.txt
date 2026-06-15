@@ -8,3 +8,5 @@
 2026-06-15 17-00-25:ERROR:File_Logger:this is a test message that should be logged in a file
 2026-06-15 17-01-18: DEV: File_Logger: this is a test message that should be logged in a file
 2026-06-15 17-01-18: ERROR: File_Logger: this is a test message that should be logged in a file
+2026-06-15 22-31-49: DEV: File_Logger: this is a test message that should be logged in a file
+2026-06-15 22-31-49: ERROR: File_Logger: this is a test message that should be logged in a file
