@@ -6,7 +6,6 @@ if TYPE_CHECKING:
 
 from Esp32.Director.Director import Director
 from Esp32.Reading import Reading
-from Esp32.Transmitter.Transmitter import Transmitter
 
 
 class EspDirector(Director):

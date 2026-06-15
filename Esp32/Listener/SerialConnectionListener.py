@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from Esp32.CommunicatorDistributer import CommunicatorDistributer
 
-from Esp32.Connection.Connection import Connection
+from Esp32.Connection.Connection import Connection, ConnectionDevice
 from Esp32.Connection.SerialConnection import SerialConnection
 from Esp32.Listener.ConnectionListener import ConnectionListener
 
@@ -19,6 +19,10 @@ class SerialConnectionListener(ConnectionListener):
         self.running: bool = True
         self.defaultBaudRate: int = 115200
 
+        # Trefwoorden per apparaat — pas aan naar jouw situatie
+        self.espKeywords = ("CH340", "CP210", "CP2102", "UART")
+        self.piKeywords = ("Raspberry", "Pi")
+
     def HandleIncommingDevices(self) -> None:
         print("[SerialConnectionListener] Wachten op seriële apparaten...")
         try:
@@ -26,13 +30,14 @@ class SerialConnectionListener(ConnectionListener):
                 currentPorts = {
                     p.device
                     for p in serial.tools.list_ports.comports()
-                    if any(kw in p.description for kw in ("USB", "CH340", "CP210", "UART"))
+                    if self.IsKnownDevice(p.description)
                 }
 
                 for port in currentPorts - self.knownPorts:
                     self.knownPorts.add(port)
-                    print(f"[SerialConnectionListener] Nieuw apparaat: {port}")
-                    self.distributer.AddConnection(port, self.CreateConnection(port))
+                    connection = self.CreateConnection(port)
+                    print(f"[SerialConnectionListener] Nieuw apparaat: {port} ({connection.device.name})")
+                    self.distributer.AddConnection(port, connection)
 
                 for port in self.knownPorts - currentPorts:
                     self.knownPorts.discard(port)
@@ -48,4 +53,21 @@ class SerialConnectionListener(ConnectionListener):
         self.running = False
 
     def CreateConnection(self, identifier: str) -> Connection:
-        return SerialConnection(identifier, self.defaultBaudRate)
+        description = self.GetDescription(identifier)
+        device = self.DetectDevice(description)
+        return SerialConnection(identifier, device, self.defaultBaudRate)
+
+    def IsKnownDevice(self, description: str) -> bool:
+        allKeywords = self.espKeywords + self.piKeywords
+        return any(kw in description for kw in allKeywords)
+
+    def DetectDevice(self, description: str) -> ConnectionDevice:
+        if any(kw in description for kw in self.piKeywords):
+            return ConnectionDevice.PI
+        return ConnectionDevice.ESP
+
+    def GetDescription(self, port: str) -> str:
+        for p in serial.tools.list_ports.comports():
+            if p.device == port:
+                return p.description
+        return ""

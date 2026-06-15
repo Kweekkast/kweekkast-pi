@@ -10,6 +10,11 @@ class Main:
         distributer.StartAllListeners()
 
         print("[Main] Systeem gestart. Wachten op apparaten... (Ctrl+C om te stoppen)")
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("[Main] Gestopt.")
 
 
 if __name__ == "__main__":

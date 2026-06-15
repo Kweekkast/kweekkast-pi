@@ -6,10 +6,6 @@ from Esp32.Reading import Reading
 from Esp32.Connection.Connection import Connection
 from Esp32.Subject import Subject
 
-if TYPE_CHECKING:
-    from Esp32.Director.EspDirector import EspDirector
-    from Esp32.Transmitter.Transmitter import Transmitter
-
 
 class Communicator(Subject):
 
@@ -17,7 +13,9 @@ class Communicator(Subject):
         super().__init__()
         self.connection = connection
         self.reading = Reading()
-        self.director = EspDirector
+
+        from Esp32.Director.Director import Director
+        self.director = Director.CreateDirector(self)
 
         from Esp32.Receiver.Receiver import Receiver
         self.receiver = Receiver.CreateReceiver(self, connection)
@@ -31,6 +29,7 @@ class Communicator(Subject):
 
     def UpdateReading(self, message: str) -> None:
         self.reading = Reading(message, self.ValidateMessage(message))
+        self.director.HandleReading(self.reading)
         self.NotifyAll()
 
     def ValidateMessage(self, message: str) -> bool:
