@@ -6,6 +6,8 @@ from ImageCapturing.Triggers.TimerTrigger import TimerTrigger
 from ImageCapturing.Triggers.Buttontrigger import ButtonTrigger
 from ImageCapturing.Actioners.ImageCapturer import ImageCapturer
 
+cameraComponentHandler = CameraComponentHandler(TimerTrigger)
+cameraComponentHandler.run()
 
 trigger = TimerTrigger(60) #TimerTrigger(60) for timer trigger, ButtonTrigger() for button trigger
 thread = Thread(target =trigger.triggerLoop, args = ())
