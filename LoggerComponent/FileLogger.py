@@ -34,3 +34,6 @@ class File_Logger(Abstract_Logger):
             
         super().Log(MessageSeverity.DEV, __class__.__name__, dir_msg)
         super().Log(file_msg_severity, __class__.__name__, file_msg)
+
+
+logger = File_Logger()

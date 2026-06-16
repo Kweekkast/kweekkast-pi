@@ -4,3 +4,5 @@ class Console_Logger(Abstract_Logger):
 
     def _write(self, formatted_message):
         print(formatted_message)
+
+logger = Console_Logger()
