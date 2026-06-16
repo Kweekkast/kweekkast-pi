@@ -1,4 +1,7 @@
-class ICaptureTriggerObserver:
+from abc import ABC, abstractmethod
 
+class ICaptureTriggerObserver(ABC):
+
+    @abstractmethod
     def notify(self):
-        raise NotImplementedError("This is an Interface and can't be used as a standalone function.")
+        pass

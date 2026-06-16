@@ -25,8 +25,8 @@ class CaptureTrigger_Subject:
             try:
                 observer.notify()
                 FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an Observer from the list was notified")
-            except:
-                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,observer + " could not be notified")
+            except Exception as e:
+                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "Something went wrong notifying:" + str(observer) + ". \n Exception:" + repr(e))
                 continue
 
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"All Observers were notified")
