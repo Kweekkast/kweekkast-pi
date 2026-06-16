@@ -1,6 +1,10 @@
 from ImageCapturing.Actioners.CaptureTrigger_Observer import ICaptureTriggerObserver
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
 import StringGenerators 
 import cv2
+
 
 class ImageCapturer(ICaptureTriggerObserver):
 
@@ -15,7 +19,7 @@ class ImageCapturer(ICaptureTriggerObserver):
             raise ValueError("something went wrong. Image could not be captured")
         
         cv2.imwrite(newImagePath,frame)
-        print(StringGenerators.fetchCustomDateString() + ": ImageCapturer: An image was written to" + newImagePath)
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": ImageCapturer: An image was written to" + newImagePath)
 
     def __del__(self):
         self._captureDevice.release()

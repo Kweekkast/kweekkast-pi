@@ -1,4 +1,7 @@
 from threading import Thread
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
 from ImageCapturing.Actioners.ImageCapturer import ImageCapturer
 import StringGenerators
 import time
@@ -12,7 +15,7 @@ class CameraComponentHandler():
             imageCapturer = ImageCapturer(x)
             self.trigger.AddObserver(imageCapturer)
             self.imageCapturers.append(imageCapturer)
-            print(StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was added to the list")
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was added to the list")
 
 
 
@@ -20,9 +23,9 @@ class CameraComponentHandler():
         thread = Thread(target =self.trigger.triggerLoop, args = ())
         thread.start()
 
-        print(StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System Sleeping for 5 minutes")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System Sleeping for 5 minutes")
         time.sleep(300)
-        print(StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System is done sleeping Sleeping")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System is done sleeping Sleeping")
         self.ReleaseAllCameras()
 
 
@@ -30,4 +33,4 @@ class CameraComponentHandler():
         for imageCapturer in self.imageCapturers:
             self.trigger.removeObserver(imageCapturer)
             imageCapturer.__del__()
-            print(StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was released" )
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was released" )
