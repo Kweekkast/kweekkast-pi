@@ -1,2 +1,13 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
 [project]
-dependencies = ["pyserial"]
+name = "kweekkast"
+version = "0.1.0"
+description = "..."
+authors = [{ name = "Fedde" }]
+
+[tool.setuptools.packages.find]
+include = ["serial"]
+
