@@ -2,7 +2,7 @@ from ImageCapturing.Actioners.CaptureTrigger_Observer import ICaptureTriggerObse
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
-import StringGenerators 
+import StringFormatter 
 import cv2
 
 
@@ -13,7 +13,7 @@ class ImageCapturer(ICaptureTriggerObserver):
         self._captureDevice = cv2.VideoCapture(self._captureDeviceID)
 
     def notify(self):
-        newImagePath = StringGenerators.createImagePath(self._captureDeviceID) 
+        newImagePath = StringFormatter.createImagePath(self._captureDeviceID) 
         ret, frame = self._captureDevice.read()
         if not ret:
             raise ValueError("something went wrong. Image could not be captured")

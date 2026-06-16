@@ -1,5 +1,7 @@
 from ImageCapturing.Triggers.AbstractTrigger import Abstract_Trigger
-import StringGenerators
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+from LoggerComponent.LoggerEnum import MessageSeverity
 import time
 
 class TimerTrigger(Abstract_Trigger):
@@ -9,7 +11,7 @@ class TimerTrigger(Abstract_Trigger):
         self.timeSeconds = timeSeconds
 
     def triggerLoop(self):
-        print(StringGenerators.fetchCustomDateString() + ": Timer Trigger: The triggerloop has started")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"The triggerloop has started")
         while True:
             timeBegin = time.time()
 

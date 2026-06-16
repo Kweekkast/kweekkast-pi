@@ -1,7 +1,6 @@
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
-import StringGenerators
 
 class CaptureTrigger_Subject:
     
@@ -9,8 +8,8 @@ class CaptureTrigger_Subject:
         self._observerlist = []
 
     def AddObserver(self, newObserver):
-        if not hasattr(newObserver, "notify"):                      #this if statement makes sure the object has a notify() method. 
-            raise TypeError("Observer must implement notify()")     #which is basically the only way to ensure only (functionally) observers can populate it. Yay for ducktyping :(
+        if not hasattr(newObserver, "notify"):
+            raise TypeError("Observer must implement notify()")
         
         self._observerlist.append(newObserver)
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Observer was added to list")

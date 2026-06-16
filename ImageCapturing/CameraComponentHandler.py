@@ -3,7 +3,6 @@ from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
 from ImageCapturing.Actioners.ImageCapturer import ImageCapturer
-import StringGenerators
 import time
 
 class CameraComponentHandler():

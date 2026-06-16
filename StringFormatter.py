@@ -1,7 +1,7 @@
 import datetime
 
 def createImagePath(ImageCaptureDevice):
-    imagePath = "Assets/Device_" + str(ImageCaptureDevice) + "/" + fetchCustomDateString() + ".png"
+    imagePath = "Assets/Device_" + str(ImageCaptureDevice) + "/" + fetchCustomDateTimeString() + ".png"
     return imagePath
 
 def fetchCustomDateTimeString():
