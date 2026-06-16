@@ -1,13 +1,12 @@
 from __future__ import annotations
 import threading
-from typing import TYPE_CHECKING
 
+from Esp32.Broker.MessageBroker import MessageBroker
 from Esp32.Reading import Reading
 from Esp32.Connection.Connection import Connection
-from Esp32.Subject import Subject
 
 
-class Communicator(Subject):
+class Communicator(MessageBroker):
 
     def __init__(self, connection: Connection):
         super().__init__()
@@ -30,7 +29,7 @@ class Communicator(Subject):
     def UpdateReading(self, message: str) -> None:
         self.reading = Reading(message, self.ValidateMessage(message))
         self.director.HandleReading(self.reading)
-        self.NotifyAll()
+        self.Publish(self.connection.device, self.reading)
 
     def ValidateMessage(self, message: str) -> bool:
         # TODO: voeg protocol-specifieke validatie toe

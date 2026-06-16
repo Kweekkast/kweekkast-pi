@@ -14,6 +14,7 @@ class Main:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
+            distributer.Disconnect()
             print("[Main] Gestopt.")
 
 
