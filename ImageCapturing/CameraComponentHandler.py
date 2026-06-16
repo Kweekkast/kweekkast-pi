@@ -22,12 +22,6 @@ class CameraComponentHandler():
         thread = Thread(target =self.trigger.triggerLoop, args = ())
         thread.start()
 
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"System Sleeping for 5 minutes")
-        time.sleep(300)
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"System is done sleeping Sleeping")
-        self.ReleaseAllCameras()
-
-
     def ReleaseAllCameras(self):
         for imageCapturer in self.imageCapturers:
             self.trigger.removeObserver(imageCapturer)
