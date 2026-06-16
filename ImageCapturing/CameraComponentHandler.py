@@ -15,7 +15,7 @@ class CameraComponentHandler():
             imageCapturer = ImageCapturer(x)
             self.trigger.AddObserver(imageCapturer)
             self.imageCapturers.append(imageCapturer)
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was added to the list")
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was added to the list")
 
 
 
@@ -23,9 +23,9 @@ class CameraComponentHandler():
         thread = Thread(target =self.trigger.triggerLoop, args = ())
         thread.start()
 
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System Sleeping for 5 minutes")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"System Sleeping for 5 minutes")
         time.sleep(300)
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: System is done sleeping Sleeping")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"System is done sleeping Sleeping")
         self.ReleaseAllCameras()
 
 
@@ -33,4 +33,4 @@ class CameraComponentHandler():
         for imageCapturer in self.imageCapturers:
             self.trigger.removeObserver(imageCapturer)
             imageCapturer.__del__()
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": CameraComponentHandler: an imageCapturer was released" )
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was released" )

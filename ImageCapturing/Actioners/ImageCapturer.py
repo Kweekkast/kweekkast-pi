@@ -19,7 +19,7 @@ class ImageCapturer(ICaptureTriggerObserver):
             raise ValueError("something went wrong. Image could not be captured")
         
         cv2.imwrite(newImagePath,frame)
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,StringGenerators.fetchCustomDateString() + ": ImageCapturer: An image was written to" + newImagePath)
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__," An image was written to" + newImagePath)
 
     def __del__(self):
         self._captureDevice.release()
