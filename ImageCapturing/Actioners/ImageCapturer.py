@@ -1,6 +1,5 @@
 from ImageCapturing.Actioners.CaptureTrigger_Observer import ICaptureTriggerObserver
 from LoggerComponent.LoggerEnum import MessageSeverity
-from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
 import StringFormatter 
 import cv2

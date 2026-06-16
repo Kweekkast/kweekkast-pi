@@ -1,5 +1,4 @@
 from ImageCapturing.Triggers.AbstractTrigger import Abstract_Trigger
-from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
 from LoggerComponent.LoggerEnum import MessageSeverity
 import time

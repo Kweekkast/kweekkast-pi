@@ -1,9 +1,7 @@
 from threading import Thread
 from LoggerComponent.LoggerEnum import MessageSeverity
-from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
 from ImageCapturing.Actioners.ImageCapturer import ImageCapturer
-import time
 
 class CameraComponentHandler():
     def __init__(self, abstractTrigger, cameras):

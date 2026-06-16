@@ -1,4 +1,3 @@
-
 class ICaptureTriggerObserver:
 
     def notify(self):

@@ -1,10 +1,5 @@
 import time
 from Esp32.CommunicatorDistributer import CommunicatorDistributer
-from Esp32.Director.EspDirector import EspDirector
-from Esp32.Transmitter.SerialTransmitter import SerialTransmitter
-from LoggerComponent import ConsoleLogger
-from LoggerComponent import FileLogger
-from LoggerComponent.LoggerEnum import MessageSeverity
 from ImageCapturing.CameraComponentHandler import CameraComponentHandler
 from ImageCapturing.Triggers.TimerTrigger import TimerTrigger
 
