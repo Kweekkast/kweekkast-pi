@@ -7,22 +7,30 @@ import os
 class File_Logger(Abstract_Logger):
 
     def __init__(self):
-        file = Path(StringFormatter.SessionLogFilePath)
-        try:
-            if file.is_file():
-                raise UserWarning("This file already exists")
-            elif file.is_dir():
-                raise UserWarning("This is a directory")
-            else:
-                os.makedirs(StringFormatter.SessionLogDirectoryPath)
-                os.path.join(StringFormatter.SessionLogDirectoryPath, StringFormatter.SessionLogfileName)
-        except Exception as e:
-                self._write(StringFormatter.FormatLogMessage(MessageSeverity.ERROR,self.__class__.__name__,"Something went wrong: " + repr(e)))
-
-        self._write(StringFormatter.FormatLogMessage(MessageSeverity.DEV, self.__class__.__name__,"Successfully created file!"))
-
-
+        self._setupLogEnvironment()
 
     def _write(self, formatted_message):
         with open(StringFormatter.SessionLogFilePath, "a") as file:
             file.write(formatted_message + "\n")
+
+    def _setupLogEnvironment(self):
+        file = Path(StringFormatter.SessionLogFilePath)
+        directory = Path(StringFormatter.SessionLogDirectoryPath)
+
+        if directory.exists() and directory.is_dir():
+            dir_msg = "Directory exists, no directory was created."
+        else:
+            os.makedirs(directory, exist_ok=True)
+            dir_msg = "Directory did not exist, a new directory was created."
+
+        if file.exists():
+            file_msg = "Log file already exists."
+            file_msg_severity = MessageSeverity.ERROR
+        else:
+            f = open(file, "x")
+            f.close()
+            file_msg = "Log file does not exist yet. File Created Before first log event"
+            file_msg_severity = MessageSeverity.DEV
+            
+        super().Log(MessageSeverity.DEV, __class__.__name__, dir_msg)
+        super().Log(file_msg_severity, __class__.__name__, file_msg)
