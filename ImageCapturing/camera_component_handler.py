@@ -1,7 +1,7 @@
 from threading import Thread
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import FileLogger
-from ImageCapturing.Actioners.camera_image_capturer import ImageCapturer
+from ImageCapturing.Actioners.camera_image_capturer import CameraImageCapturer
 
 class CameraComponentHandler():
     def __init__(self, abstract_trigger, cameras):
@@ -10,7 +10,7 @@ class CameraComponentHandler():
 
         for x in range(cameras):
             try:
-                imageCapturer = ImageCapturer(x)
+                imageCapturer = CameraImageCapturer(x)
                 self._TRIGGER.add_observer(imageCapturer)
                 self._IMAGE_CAPTURERS.append(imageCapturer)
                 FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was added to the list")

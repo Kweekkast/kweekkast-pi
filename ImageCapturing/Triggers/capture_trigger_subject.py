@@ -8,7 +8,7 @@ class CaptureTriggerSubject:
         self._OBSERVERLIST = []
 
     def add_observer(self, newObserver):
-        if hasattr(newObserver, "notify"):
+        if not hasattr(newObserver, "notify"):
             raise TypeError("Observer must implement notify()")
         
         self._OBSERVERLIST.append(newObserver)
@@ -26,7 +26,7 @@ class CaptureTriggerSubject:
                 observer.notify()
                 FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an Observer from the list was notified")
             except Exception as e:
-                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "Something went wrong notifying:" + str(observer) + ". \n Exception:" + repr(e))
+                FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__, "Something went wrong notifying:" + str(observer) + ". \n Exception:" + repr(e))
                 continue
 
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"All Observers were notified")

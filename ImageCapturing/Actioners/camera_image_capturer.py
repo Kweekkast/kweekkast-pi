@@ -5,7 +5,7 @@ import StringFormatter
 import cv2
 
 
-class ImageCapturer(AbstractImageCapturer):
+class CameraImageCapturer(AbstractImageCapturer):
 
     def __init__(self, VideoCaptureDeviceID):
         self._CAPTURE_DEVICE_ID = VideoCaptureDeviceID
@@ -15,14 +15,17 @@ class ImageCapturer(AbstractImageCapturer):
         self._CAPTURE_DEVICE = cv2.VideoCapture(self._CAPTURE_DEVICE_ID)
 
     def notify(self):
-        self.capture_image()
+        try:
+            self.capture_image()
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, str(self) + " was notified")
+        except Exception as e:
+            FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__, "Something went wrong notifying:" + str(self) + ". \n Exception:" + repr(e))
 
     def capture_image(self):
         new_image_path = StringFormatter.createImagePath(self._CAPTURE_DEVICE_ID) 
         if not self._CAPTURE_DEVICE.isOpened():
             self._claim_capture_device()
             FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__,"Attempted to recapture Device")
-            return
 
         ret, frame = self._CAPTURE_DEVICE.read()
         if not ret:
