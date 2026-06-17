@@ -1,4 +1,7 @@
 import serial
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+from LoggerComponent.LoggerEnum import MessageSeverity
 
 from kweekkast_common.communicator import Communicator
 from kweekkast_common.receiver.receiver import Receiver
@@ -15,14 +18,18 @@ class SerialReceiver(Receiver):
         return self.serial.readline().decode("utf-8", errors="replace").strip()
 
     def StartListening(self) -> None:
-        print(f"[SerialReceiver] Luisteren op {self.connection.port}")
-        while self.running:
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, f"Luisteren op {self.connection.port}")
+        while True:
             try:
                 if self.serial.is_open:
                     line = self.ReadLine()
                     if line:
-                        print(f"[SerialReceiver] Ontvangen op {self.connection.port}: {line}")
+                        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,
+                                              f"Ontvangen op {self.connection.port}: {line}")
                         self.communicator.UpdateReading(line)
             except serial.SerialException:
-                print(f"[SerialReceiver] Verbinding verloren op {self.connection.port}")
-                self.running = False
+                FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__,
+                                      f"Verbinding verloren op {self.connection.port}")
+                ConsoleLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__,
+                                         f"Verbinding verloren op {self.connection.port}")
+                break

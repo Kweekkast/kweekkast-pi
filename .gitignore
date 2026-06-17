@@ -218,3 +218,9 @@ __marimo__/
 .streamlit/secrets.toml
 
 .idea
+
+*/Device_0/*.png
+*/Device_1/*.png
+*/Device_2/*.png
+
+logs/
