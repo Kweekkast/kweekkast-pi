@@ -26,11 +26,11 @@ class Receiver(ABC):
         # TODO: decouple
         match connection.type:
             case ConnectionType.SERIAL:
-                from kweekkast_core.receiver.serial_receiver import SerialReceiver
+                from kweekkast_core.communication_component.receiver.serial_receiver import SerialReceiver
 
                 return SerialReceiver(communicator, connection)
             case ConnectionType.WIFI:
-                from kweekkast_net.receiver.wifi_receiver import WifiReceiver
+                from kweekkast_net.communication_component.receiver.wifi_receiver import WifiReceiver
 
                 return WifiReceiver(communicator, connection)
             case _:
