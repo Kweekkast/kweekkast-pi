@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from kweekkast_common.Broker.Subscriber import Subscriber
+from kweekkast_common.communication_component.Subscriber import Subscriber
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading
 
 
@@ -15,7 +17,9 @@ class EspDataHandler(Subscriber):
     def Notify(self, reading: Reading) -> None:
         piCommunicator = self.distributer.FindPiCommunicator()
         if piCommunicator and piCommunicator.director:
-            print(f"[EspDataHandler] Doorsturen naar Pi: {reading.message}")
+            file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                                   f"Doorsturen naar Pi: {reading.message}")
             piCommunicator.director.HandleReading(reading)
         else:
-            print(f"[EspDataHandler] Geen Pi gevonden om naar door te sturen")
+            file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                                   f"Geen Pi gevonden om naar door te sturen")

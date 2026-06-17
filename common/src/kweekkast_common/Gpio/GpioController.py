@@ -1,7 +1,9 @@
 import json
 
-from kweekkast_common.Broker.Subscriber import Subscriber
+from kweekkast_common.Subscriber import Subscriber
 from kweekkast_common.Gpio.GpioDevice import GpioDeviceType, GpioDevice
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading
 
 # gpiozero gebruikt op de Pi 5 de lgpio-backend en werkt daar wel betrouwbaar,
@@ -48,7 +50,8 @@ class GpioController(Subscriber):
                 if GPIO_AVAILABLE:
                     self.TrySetupOutput(deviceType, index, pin)
 
-                print(f"[GpioController] Pin {pin} ingesteld voor {deviceType.value} {index}")
+                file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                                       f"Pin {pin} ingesteld voor {deviceType.value} {index}")
 
     def TrySetupOutput(self, deviceType: GpioDeviceType, index: int, pin: int) -> None:
         """
@@ -61,12 +64,14 @@ class GpioController(Subscriber):
         try:
             self.outputs[(deviceType, index)] = OutputDevice(pin, initial_value=False)
         except Exception as e:
-            print(f"[GpioController] Kon pin {pin} niet instellen ({e}); "
+            file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                                   f"Kon pin {pin} niet instellen ({e}); "
                   f"{deviceType.value} {index} draait in simulatiemodus")
 
     def Notify(self, reading: Reading) -> None:
         if not reading.valid:
-            print(f"[GpioController] Ongeldig bericht: {reading.message}")
+            file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                                   f"Ongeldig bericht: {reading.message}")
             return
 
         try:
@@ -77,12 +82,14 @@ class GpioController(Subscriber):
             self.SetPin(deviceType, index, state)
             print("TEST")
         except (json.JSONDecodeError, KeyError, ValueError) as e:
-            print(f"[GpioController] Kon bericht niet verwerken: {reading.message} ({e})")
+            file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                                   f"Kon bericht niet verwerken: {reading.message} ({e})")
 
     def SetPin(self, deviceType: GpioDeviceType, index: int, state: bool) -> None:
         device = self.devices.get((deviceType, index))
         if not device:
-            print(f"[GpioController] Onbekend apparaat: {deviceType.value} {index}")
+            file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                                   f"Onbekend apparaat: {deviceType.value} {index}")
             return
 
         device.state = state
@@ -92,10 +99,12 @@ class GpioController(Subscriber):
             try:
                 output.on() if state else output.off()
             except Exception as e:
-                print(f"[GpioController] Kon pin {device.pin} niet aansturen ({e}); "
+                file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                                       f"Kon pin {device.pin} niet aansturen ({e}); "
                       f"alleen logisch bijgewerkt")
 
-        print(f"[GpioController] {deviceType.value} {index} (pin {device.pin}) → {'AAN' if state else 'UIT'}")
+        file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                               f"{deviceType.value} {index} (pin {device.pin}) → {'AAN' if state else 'UIT'}")
 
     def Cleanup(self) -> None:
         for output in self.outputs.values():
@@ -104,4 +113,5 @@ class GpioController(Subscriber):
             except Exception:
                 pass
         self.outputs.clear()
-        print("[GpioController] GPIO opgeruimd")
+        file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
+                               f"GPIO opgeruimd")
