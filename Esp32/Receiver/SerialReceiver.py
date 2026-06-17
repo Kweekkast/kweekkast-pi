@@ -25,7 +25,7 @@ class SerialReceiver(Receiver):
 
     def StartListening(self) -> None:
         FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Luisteren op {self.connection.port}")
-        while self.running:
+        while True:
             try:
                 if self.serial.is_open:
                     line = self.ReadLine()
@@ -35,4 +35,4 @@ class SerialReceiver(Receiver):
             except serial.SerialException:
                 FileLogger.logger.Log(MessageSeverity.ERROR,__class__.__name__,f"Verbinding verloren op {self.connection.port}")
                 ConsoleLogger.logger.Log(MessageSeverity.ERROR,__class__.__name__,f"Verbinding verloren op {self.connection.port}")
-                self._running = False
+                break
