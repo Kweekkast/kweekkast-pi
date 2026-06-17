@@ -9,7 +9,7 @@ class ModuleTelemetryClient:
         endpoint_url: str,
         timeout_seconds: float = 5.0,
         client: httpx.Client | None = None,
-        allow_insecure_http: bool = True, # TODO
+        allow_insecure_http: bool = False,
         api_token: str | None = None,
     ):
         if not allow_insecure_http and not endpoint_url.startswith("https://"):
