@@ -38,7 +38,10 @@ class CommunicatorDistributor(Observer):
 
     def RemoveConnection(self, identifier: str) -> None:
         communicator = self.communicators.pop(identifier, None)
-        if communicator and communicator.connection.device == ConnectionDevice.ESP:
+        if communicator is None:
+            return
+
+        if communicator.connection.device == ConnectionDevice.ESP:
             communicator.UnSubscribe(self)
 
         communicator.receiver.StopListening()
