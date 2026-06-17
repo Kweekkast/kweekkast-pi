@@ -3,6 +3,10 @@ from typing import TYPE_CHECKING
 
 import serial
 
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+
 if TYPE_CHECKING:
     from Esp32.Communicator import Communicator
 
@@ -20,14 +24,15 @@ class SerialReceiver(Receiver):
         return self.serial.readline().decode("utf-8", errors="replace").strip()
 
     def StartListening(self) -> None:
-        print(f"[SerialReceiver] Luisteren op {self.connection.port}")
+        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Luisteren op {self.connection.port}")
         while self.running:
             try:
                 if self.serial.is_open:
                     line = self.ReadLine()
                     if line:
-                        print(f"[SerialReceiver] Ontvangen op {self.connection.port}: {line}")
+                        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Ontvangen op {self.connection.port}: {line}")
                         self.communicator.UpdateReading(line)
             except serial.SerialException:
-                print(f"[SerialReceiver] Verbinding verloren op {self.connection.port}")
+                FileLogger.logger.Log(MessageSeverity.ERROR,__class__.__name__,f"Verbinding verloren op {self.connection.port}")
+                ConsoleLogger.logger.Log(MessageSeverity.ERROR,__class__.__name__,f"Verbinding verloren op {self.connection.port}")
                 self._running = False

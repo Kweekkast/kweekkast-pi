@@ -1,6 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+
 if TYPE_CHECKING:
     from Esp32.Communicator import Communicator
 
@@ -19,5 +23,5 @@ class WifiReceiver(Receiver):
         return ""
 
     def StartListening(self) -> None:
-        print(f"[WifiReceiver] Luisteren op {self.connection.host}:{self.connection.port}")
+        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f" Luisteren op {self.connection.host}:{self.connection.port}")
         # TODO: implementeer wifi luisteren

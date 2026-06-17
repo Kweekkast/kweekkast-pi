@@ -2,6 +2,10 @@ from __future__ import annotations
 import threading
 from contextlib import nullcontext
 
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+
 from Esp32.Connection.Connection import Connection, ConnectionType, ConnectionDevice
 from Esp32.Communicator import Communicator
 from Esp32.Observer import Observer
@@ -26,7 +30,7 @@ class CommunicatorDistributer(Observer):
             )
             self._listeners.append(listener)
             t.start()
-            print(f"[Distributer] {listenerClass.__name__} gestart")
+            FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"{listenerClass.__name__} gestart")
 
     def AddConnection(self, identifier: str, connection: Connection) -> None:
         communicator = Communicator(connection)
@@ -34,7 +38,7 @@ class CommunicatorDistributer(Observer):
             communicator.Subscribe(self)
 
         self.communicators[identifier] = communicator
-        print(f"[Distributer] Communicator aangemaakt voor {identifier}")
+        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Communicator aangemaakt voor {identifier}")
 
     def RemoveConnection(self, identifier: str) -> None:
         communicator = self.communicators.pop(identifier, None)
@@ -42,7 +46,7 @@ class CommunicatorDistributer(Observer):
             communicator.UnSubscribe(self)
 
         communicator.receiver.StopListening()
-        print(f"[Distributer] Communicator verwijderd voor {identifier}")
+        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Communicator verwijderd voor {identifier}")
 
     def Notify(self) -> None:
         """Wordt aangeroepen als een Communicator een nieuwe Reading heeft."""
@@ -55,10 +59,10 @@ class CommunicatorDistributer(Observer):
         """Stuur het bericht van een ESP32 door naar de Pi-communicator."""
         piCommunicator = self.FindPiCommunicator()
         if piCommunicator:
-            print(f"[Distributer] Doorsturen naar Pi: {source.reading.message}")
+            FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Doorsturen naar Pi: {source.reading.message}")
             piCommunicator.UpdateReading(source.reading)
         else:
-            print(f"[Distributer] Geen Pi gevonden om naar door te sturen")
+            FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Geen Pi gevonden om naar door te sturen")
 
     def FindPiCommunicator(self) -> Communicator | None:
         """Zoek de communicator die verbonden is met de Pi (WiFi)."""

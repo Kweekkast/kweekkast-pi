@@ -3,6 +3,10 @@ import serial.tools.list_ports
 import time
 from typing import TYPE_CHECKING
 
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+
 if TYPE_CHECKING:
     from Esp32.CommunicatorDistributer import CommunicatorDistributer
 
@@ -24,7 +28,7 @@ class SerialConnectionListener(ConnectionListener):
         self.piKeywords = ("Raspberry", "Pi")
 
     def HandleIncommingDevices(self) -> None:
-        print("[SerialConnectionListener] Wachten op seriële apparaten...")
+        FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,"Wachten op seriële apparaten...")
         try:
             while self.running:
                 currentPorts = {
@@ -36,18 +40,19 @@ class SerialConnectionListener(ConnectionListener):
                 for port in currentPorts - self.knownPorts:
                     self.knownPorts.add(port)
                     connection = self.CreateConnection(port)
-                    print(f"[SerialConnectionListener] Nieuw apparaat: {port} ({connection.device.name})")
+                    FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Nieuw apparaat: {port} ({connection.device.name})")
+                    ConsoleLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Nieuw apparaat: {port} ({connection.device.name})")
                     self.distributer.AddConnection(port, connection)
 
                 for port in self.knownPorts - currentPorts:
                     self.knownPorts.discard(port)
-                    print(f"[SerialConnectionListener] Losgekoppeld: {port}")
+                    FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,f"Losgekoppeld: {port}")
                     self.distributer.RemoveConnection(port)
 
                 time.sleep(1)
 
         except KeyboardInterrupt:
-            print("[SerialConnectionListener] Gestopt.")
+            FileLogger.logger.Log(MessageSeverity.DEV,__class__.__name__,"proces gestopt.")
 
     def StopReadingIncommingDevices(self) -> None:
         self.running = False
