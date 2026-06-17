@@ -9,18 +9,18 @@ class ImageCapturer(AbstractImageCapturer):
 
     def __init__(self, VideoCaptureDeviceID):
         self._CAPTURE_DEVICE_ID = VideoCaptureDeviceID
-        self._claimCaptureDevice()
+        self._claim_capture_device()
 
-    def _claimCaptureDevice(self):
+    def _claim_capture_device(self):
         self._CAPTURE_DEVICE = cv2.VideoCapture(self._CAPTURE_DEVICE_ID)
 
     def notify(self):
-        self.captureImage()
+        self.capture_image()
 
-    def captureImage(self):
+    def capture_image(self):
         new_image_path = StringFormatter.createImagePath(self._CAPTURE_DEVICE_ID) 
         if not self._CAPTURE_DEVICE.isOpened():
-            self._claimCaptureDevice()
+            self._claim_capture_device()
             FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__,"Attempted to recapture Device")
             return
 

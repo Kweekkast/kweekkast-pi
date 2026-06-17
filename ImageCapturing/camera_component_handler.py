@@ -18,7 +18,7 @@ class CameraComponentHandler():
         thread = Thread(target =self._TRIGGER.triggerLoop, args = ())
         thread.start()
 
-    def ReleaseAllCameras(self):
+    def release_all_cameras(self):
         for image_capturer in self._IMAGE_CAPTURERS:
             self._TRIGGER.removeObserver(image_capturer)
             image_capturer.__del__()

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 class AbstractImageCapturer(ICaptureTriggerObserver, ABC):
     
     @abstractmethod
-    def captureImage():
+    def capture_image():
         pass
 
     

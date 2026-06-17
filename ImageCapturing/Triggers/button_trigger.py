@@ -5,7 +5,7 @@ class ButtonTrigger(AbstractTrigger):
     def __init__(self):
         super().__init__()
 
-    def triggerLoop(self):
+    def trigger_loop(self):
         while True:
             input("Press enter to capture...")
-            super().notifyAllObservers()
+            super().notify_all_observers()

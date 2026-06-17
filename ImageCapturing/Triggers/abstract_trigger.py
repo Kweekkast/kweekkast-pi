@@ -7,5 +7,5 @@ class AbstractTrigger(CaptureTriggerSubject, ABC):
         super().__init__()
 
     @abstractmethod
-    def triggerLoop(self):
+    def trigger_loop(self):
         pass

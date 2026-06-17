@@ -7,18 +7,18 @@ class CaptureTriggerSubject:
     def __init__(self):
         self._OBSERVERLIST = []
 
-    def AddObserver(self, newObserver):
+    def add_observer(self, newObserver):
         if not hasattr(newObserver, "notify"):
             raise TypeError("Observer must implement notify()")
         
         self._OBSERVERLIST.append(newObserver)
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Observer was added to list")
 
-    def removeObserver(self, oldObserver):
+    def remove_observer(self, oldObserver):
         self._OBSERVERLIST.remove(oldObserver)
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Observer was removed from list")
 
-    def notifyAllObservers(self):
+    def notify_all_observers(self):
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Notifying all Observers")
 
         for observer in self._OBSERVERLIST:
