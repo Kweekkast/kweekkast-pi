@@ -23,6 +23,7 @@ class Main:
         except KeyboardInterrupt:
             file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
                                    f"Gestopt")
+            distributor.Disconnect()
 
 
 def main() -> None:
