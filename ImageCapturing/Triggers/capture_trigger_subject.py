@@ -8,7 +8,7 @@ class CaptureTriggerSubject:
         self._OBSERVERLIST = []
 
     def add_observer(self, newObserver):
-        if not hasattr(newObserver, "notify"):
+        if hasattr(newObserver, "notify"):
             raise TypeError("Observer must implement notify()")
         
         self._OBSERVERLIST.append(newObserver)

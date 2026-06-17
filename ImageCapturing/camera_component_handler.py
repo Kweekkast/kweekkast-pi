@@ -9,10 +9,14 @@ class CameraComponentHandler():
         self._IMAGE_CAPTURERS = []
 
         for x in range(cameras):
-            imageCapturer = ImageCapturer(x)
-            self._TRIGGER.add_observer(imageCapturer)
-            self._IMAGE_CAPTURERS.append(imageCapturer)
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was added to the list")
+            try:
+                imageCapturer = ImageCapturer(x)
+                self._TRIGGER.add_observer(imageCapturer)
+                self._IMAGE_CAPTURERS.append(imageCapturer)
+                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was added to the list")
+            except Exception as e:
+                FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__,"Something went wrong: " + repr(e))
+
 
     def run(self):
         thread = Thread(target =self._TRIGGER.trigger_loop, args = ())
