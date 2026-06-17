@@ -1,5 +1,6 @@
 from kweekkast_common.observer import Observer
 
+
 class Subject:
     def __init__(self):
         self.activeObservers = []

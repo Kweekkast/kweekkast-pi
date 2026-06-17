@@ -1,4 +1,5 @@
 from serial import Serial
+
 from kweekkast_common.connection.connection import Connection, ConnectionType, ConnectionDevice
 
 

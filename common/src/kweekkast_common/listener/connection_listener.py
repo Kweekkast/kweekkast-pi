@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from kweekkast_common.communicator_distributor import CommunicatorDistributor
-
 from kweekkast_common.connection.connection import Connection
 
 

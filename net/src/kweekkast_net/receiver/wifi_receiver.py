@@ -1,8 +1,5 @@
-from LoggerComponent import ConsoleLogger
-from LoggerComponent import FileLogger
-from LoggerComponent.LoggerEnum import MessageSeverity
-from typing import TYPE_CHECKING
-
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.receiver.receiver import Receiver
 from kweekkast_net.connection.wifi_connection import WifiConnection
 
@@ -18,6 +15,5 @@ class WifiReceiver(Receiver):
         return ""
 
     def StartListening(self) -> None:
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,
-                              f" Luisteren op {self.connection.host}:{self.connection.port}")
+        file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"Luisteren op {self.connection.host}:{self.connection.port}")
         # TODO: implementeer wifi luisteren

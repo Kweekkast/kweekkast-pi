@@ -1,8 +1,7 @@
 from abc import ABC, abstractmethod
 
 
-class Observer(ABC):
-
+class ICaptureTriggerObserver(ABC):
     @abstractmethod
-    def Notify(self) -> None:
+    def notify(self) -> None:
         pass

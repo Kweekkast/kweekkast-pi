@@ -10,7 +10,7 @@ class TimerTrigger(AbstractTrigger):
         self.SLEEP_TIME_SECONDS = sleep_time_seconds
 
     def trigger_loop(self):
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"The triggerloop has started")
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "The triggerloop has started")
         while True:
             time_seconds = time.time()
 

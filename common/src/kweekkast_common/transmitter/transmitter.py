@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+
 from kweekkast_common.connection.connection import ConnectionType, Connection
 
 

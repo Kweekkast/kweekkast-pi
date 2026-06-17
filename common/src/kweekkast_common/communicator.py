@@ -1,7 +1,8 @@
 import threading
-from kweekkast_common.reading import Reading
+
 from kweekkast_common.connection.connection import Connection
 from kweekkast_common.director.director import Director
+from kweekkast_common.reading import Reading
 from kweekkast_common.receiver.receiver import Receiver
 from kweekkast_common.subject import Subject
 

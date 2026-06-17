@@ -1,13 +1,8 @@
 from typing import TYPE_CHECKING
 
-from LoggerComponent.LoggerEnum import MessageSeverity
-from LoggerComponent import ConsoleLogger
-from LoggerComponent import FileLogger
-
-if TYPE_CHECKING:
-    from kweekkast_common.communicator import Communicator
-
 from kweekkast_common.director.director import Director
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading
 
 
@@ -18,8 +13,8 @@ class EspDirector(Director):
 
     def HandleReading(self, reading: Reading) -> None:
         if reading.valid:
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,f"Bericht ontvangen: {reading.message}")
+            file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"Bericht ontvangen: {reading.message}")
             self.SendMessage("ACK")
         elif not reading.valid:
-            FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__,f"Ongeldig bericht: {reading.message}")
+            file_logger.logger.log(MessageSeverity.WARNING, self.__class__.__name__, f"Ongeldig bericht: {reading.message}")
             self.SendMessage("NACK")

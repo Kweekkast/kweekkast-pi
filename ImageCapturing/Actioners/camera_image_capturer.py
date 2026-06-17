@@ -25,7 +25,7 @@ class CameraImageCapturer(AbstractImageCapturer):
         new_image_path = StringFormatter.createImagePath(self._CAPTURE_DEVICE_ID) 
         if not self._CAPTURE_DEVICE.isOpened():
             self._claim_capture_device()
-            FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__,"Attempted to recapture Device")
+            FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__, "Attempted to recapture Device")
 
         ret, frame = self._CAPTURE_DEVICE.read()
         if not ret:
@@ -33,7 +33,7 @@ class CameraImageCapturer(AbstractImageCapturer):
             raise ValueError("something went wrong. Image could not be captured")
     
         cv2.imwrite(new_image_path,frame)
-        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__," An image was written to" + new_image_path)
+        FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, " An image was written to" + new_image_path)
 
     def __del__(self):
         self._CAPTURE_DEVICE.release()

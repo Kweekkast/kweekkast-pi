@@ -7,6 +7,7 @@ class ConnectionType(Enum):
     SERIAL = 1
     WIFI = 2
 
+
 # TODO: decouple
 class ConnectionDevice(Enum):
     PI = 1

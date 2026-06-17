@@ -1,11 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from kweekkast_common.communicator import Communicator
-
-from kweekkast_common.reading import Reading
 from kweekkast_common.connection.connection import ConnectionDevice
+from kweekkast_common.reading import Reading
 
 
 class Director(ABC):

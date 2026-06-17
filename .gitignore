@@ -219,8 +219,8 @@ __marimo__/
 
 .idea
 
-*/Device_0/*.png
-*/Device_1/*.png
-*/Device_2/*.png
+*/device_0/*.png
+*/device_1/*.png
+*/device_2/*.png
 
 logs/

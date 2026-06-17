@@ -13,9 +13,9 @@ class CameraComponentHandler():
                 imageCapturer = CameraImageCapturer(x)
                 self._TRIGGER.add_observer(imageCapturer)
                 self._IMAGE_CAPTURERS.append(imageCapturer)
-                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was added to the list")
+                FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "an imageCapturer was added to the list")
             except Exception as e:
-                FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__,"Something went wrong: " + repr(e))
+                FileLogger.logger.Log(MessageSeverity.ERROR, __class__.__name__, "Something went wrong: " + repr(e))
 
 
     def run(self):
@@ -26,4 +26,4 @@ class CameraComponentHandler():
         for image_capturer in self._IMAGE_CAPTURERS:
             self._TRIGGER.remove_observer(image_capturer)
             image_capturer.__del__()
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an imageCapturer was released" )
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "an imageCapturer was released")
