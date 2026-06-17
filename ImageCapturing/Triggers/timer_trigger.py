@@ -5,25 +5,25 @@ import time
 
 class TimerTrigger(Abstract_Trigger):
 
-    def __init__(self, timeSeconds):
+    def __init__(self, sleep_time_seconds):
         super().__init__()
-        self.timeSeconds = timeSeconds
+        self.SLEEP_TIME_SECONDS = sleep_time_seconds
 
     def triggerLoop(self):
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"The triggerloop has started")
         while True:
-            timeBegin = time.time()
+            time_seconds = time.time()
 
             super().notifyAllObservers()
 
-            timeEnd = time.time()
-            timeElapsed = timeEnd - timeBegin
-            recalculatedSleeptime = self.timeSeconds-timeElapsed
+            time_end = time.time()
+            seconds_elapsed = time_end - time_seconds
+            recalculated_sleep_time_seconds = self.SLEEP_TIME_SECONDS-seconds_elapsed
 
-            if recalculatedSleeptime < 0:
-                recalculatedSleeptime = 0
+            if recalculated_sleep_time_seconds < 0:
+                recalculated_sleep_time_seconds = 0
 
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "notifying all observers took: " + str(timeElapsed) + " Seconds")
-            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "Sleeping " + str(recalculatedSleeptime) + " Seconds before renotifying observers")
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "notifying all observers took: " + str(seconds_elapsed) + " Seconds")
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__, "Sleeping " + str(recalculated_sleep_time_seconds) + " Seconds before renotifying observers")
             
-            time.sleep(recalculatedSleeptime)
+            time.sleep(recalculated_sleep_time_seconds)

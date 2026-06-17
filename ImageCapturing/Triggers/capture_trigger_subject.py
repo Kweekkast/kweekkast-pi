@@ -5,23 +5,23 @@ from LoggerComponent import FileLogger
 class CaptureTrigger_Subject:
     
     def __init__(self):
-        self._observerlist = []
+        self._OBSERVERLIST = []
 
     def AddObserver(self, newObserver):
         if not hasattr(newObserver, "notify"):
             raise TypeError("Observer must implement notify()")
         
-        self._observerlist.append(newObserver)
+        self._OBSERVERLIST.append(newObserver)
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Observer was added to list")
 
     def removeObserver(self, oldObserver):
-        self._observerlist.remove(oldObserver)
+        self._OBSERVERLIST.remove(oldObserver)
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Observer was removed from list")
 
     def notifyAllObservers(self):
         FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"Notifying all Observers")
 
-        for observer in self._observerlist:
+        for observer in self._OBSERVERLIST:
             try:
                 observer.notify()
                 FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,"an Observer from the list was notified")
