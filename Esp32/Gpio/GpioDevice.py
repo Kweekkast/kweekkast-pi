@@ -4,7 +4,7 @@ from enum import Enum
 class GpioDeviceType(Enum):
     PUMP = "pump"
     UV_LAMP = "uv_lamp"
-    DAY_LAMP = "day_lamp"
+    LED_LAMP = "led_lamp"
 
 
 class GpioDevice:

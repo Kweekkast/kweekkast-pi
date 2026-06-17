@@ -29,9 +29,9 @@ class GpioController(Subscriber):
     """
 
     PIN_MAP: dict[GpioDeviceType, dict[int, int]] = {
-        GpioDeviceType.PUMP:     {1: 17, 2: 27, 3: 22},
-        GpioDeviceType.UV_LAMP:  {1: 5,  2: 6,  3: 13},
-        GpioDeviceType.DAY_LAMP: {1: 19, 2: 26, 3: 21},
+        GpioDeviceType.PUMP:     {1: 23, 2: 18, 3: 17},
+        GpioDeviceType.UV_LAMP:  {1: 6,  2: 16,  3: 29},
+        GpioDeviceType.LED_LAMP: {1: 24, 2: 25, 3: 26},
     }
 
     def __init__(self):
