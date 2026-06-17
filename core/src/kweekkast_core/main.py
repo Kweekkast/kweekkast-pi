@@ -1,6 +1,8 @@
 import time
 
-from kweekkast_common.communicator_distributor import CommunicatorDistributor
+from kweekkast_common.communication_component.communicator_distributor import CommunicatorDistributor
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
 from kweekkast_core.image_capturing.triggers.timer_trigger import TimerTrigger
 
@@ -13,12 +15,14 @@ class Main:
         cameraComponentHandler = CameraComponentHandler(TimerTrigger(30), 1)
         cameraComponentHandler.run()
 
-        print("[Main] Systeem gestart. Wachten op apparaten... (Ctrl+C om te stoppen)")
+        file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                               f"Systeem gestart. Wachten op apparaten... (Ctrl+C om te stoppen)")
         try:
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            print("[Main] Gestopt.")
+            file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                                   f"Gestopt")
 
 
 def main() -> None:
