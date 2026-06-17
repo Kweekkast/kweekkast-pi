@@ -5,12 +5,14 @@ from kweekkast_common.communication_component.connection import Connection, Conn
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_core.communication_component.EspDataHandler import EspDataHandler
+from kweekkast_common.Gpio.GpioController import GpioController
+from kweekkast_common.EspDataHandler import EspDataHandler
 
-
-class CommunicatorDistributor():
+class CommunicatorDistributor:
     def __init__(self):
         self.communicators: dict[str, Communicator] = {}
-        self._listeners = []
+        self.listeners = []
+        self.gpioController = GpioController()
         self.espDataHandler = EspDataHandler(self)
 
     def StartAllListeners(self) -> None:
@@ -25,7 +27,7 @@ class CommunicatorDistributor():
                 name=listenerClass.__name__,
                 daemon=True
             )
-            self._listeners.append(listener)
+            self.listeners.append(listener)
             t.start()
             file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"{listenerClass.__name__} gestart")
 
@@ -34,6 +36,8 @@ class CommunicatorDistributor():
 
         if connection.device == ConnectionDevice.ESP:
             communicator.Subscribe(ConnectionDevice.ESP, self.espDataHandler)
+        elif connection.device == ConnectionDevice.PI:
+            communicator.Subscribe(ConnectionDevice.PI, self.gpioController)
 
         self.communicators[identifier] = communicator
         file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"Communicator aangemaakt voor {identifier}")
@@ -54,8 +58,13 @@ class CommunicatorDistributor():
             file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, "Geen Pi gevonden om naar door te sturen")
 
     def FindPiCommunicator(self) -> Communicator | None:
-        """Zoek de communicator die verbonden is met de Pi (WiFi)."""
         for communicator in self.communicators.values():
             if communicator.connection.device == ConnectionDevice.PI:
                 return communicator
         return None
+
+    def Disconnect(self) -> None:
+        if self.gpioController:
+            self.gpioController.Cleanup()
+        for identifier in list(self.communicators.keys()):
+            self.RemoveConnection(identifier)

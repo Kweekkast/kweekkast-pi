@@ -5,6 +5,7 @@
       <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-common.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-common.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-core.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-core.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-net.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-net.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-pi.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-pi.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-tests.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-tests.iml" />
     </modules>
   </component>
