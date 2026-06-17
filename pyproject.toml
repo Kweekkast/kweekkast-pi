@@ -1,0 +1,36 @@
+[project]
+name = "kweekkast-tests"
+description = "Run integration tests."
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "kweekkast-common",
+    "kweekkast-core",
+    "kweekkast-net",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+kweekkast-common = { path = "./common", editable = true }
+kweekkast-core = { path = "./core", editable = true }
+kweekkast-net = { path = "./net", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "common/tests",
+    "core/tests",
+    "net/tests",
+    "tests/integration",
+]
+addopts = "-ra --strict-markers --import-mode=importlib"
+markers = [
+    "integration: tests that verify multiple packages working together",
+    "hardware: tests that require real Raspberry Pi hardware or serial devices",
+]
