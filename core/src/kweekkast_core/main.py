@@ -10,8 +10,8 @@ class Main:
         distributor = CommunicatorDistributor()
         distributor.StartAllListeners()
 
-        cameraComponentHandler = CameraComponentHandler(TimerTrigger(30), 1)
-        cameraComponentHandler.run()
+        camera_component_handler = CameraComponentHandler(TimerTrigger(30), 1)
+        camera_component_handler.run()
 
         print("[Main] Systeem gestart. Wachten op apparaten... (Ctrl+C om te stoppen)")
         try:
