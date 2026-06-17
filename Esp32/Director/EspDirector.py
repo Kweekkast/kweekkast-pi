@@ -1,6 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
+from LoggerComponent.LoggerEnum import MessageSeverity
+from LoggerComponent import ConsoleLogger
+from LoggerComponent import FileLogger
+
 if TYPE_CHECKING:
     from Esp32.Communicator import Communicator
 
@@ -15,8 +19,8 @@ class EspDirector(Director):
 
     def HandleReading(self, reading: Reading) -> None:
         if reading.valid:
-            print(f"[EspDirector] Bericht ontvangen: {reading.message}")
+            FileLogger.logger.Log(MessageSeverity.DEV, __class__.__name__,f"Bericht ontvangen: {reading.message}")
             self.SendMessage("ACK")
         elif not reading.valid:
-            print(f"[EspDirector] Ongeldig bericht: {reading.message}")
+            FileLogger.logger.Log(MessageSeverity.WARNING, __class__.__name__,f"Ongeldig bericht: {reading.message}")
             self.SendMessage("NACK")
