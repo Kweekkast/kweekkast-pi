@@ -1,4 +1,4 @@
-from ImageCapturing.Actioners.Abstract_ImageCapturer import Abstract_ImageCapturer
+from ImageCapturing.Actioners.abstract_image_capturer import Abstract_ImageCapturer
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import FileLogger
 import StringFormatter 

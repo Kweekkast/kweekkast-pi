@@ -1,4 +1,4 @@
-from ImageCapturing.Triggers.AbstractTrigger import Abstract_Trigger
+from ImageCapturing.Triggers.abstract_trigger import Abstract_Trigger
 
 class ButtonTrigger(Abstract_Trigger):
 

@@ -1,4 +1,4 @@
-from ImageCapturing.Actioners.CaptureTrigger_Observer import ICaptureTriggerObserver
+from ImageCapturing.Actioners.capture_trigger_observer import ICaptureTriggerObserver
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import FileLogger
 import StringFormatter 

@@ -1,4 +1,4 @@
-from ImageCapturing.Triggers.CaptureTrigger_Subject import CaptureTrigger_Subject
+from ImageCapturing.Triggers.capture_trigger_subject import CaptureTrigger_Subject
 from abc import ABC, abstractmethod
 
 class Abstract_Trigger(CaptureTrigger_Subject, ABC):

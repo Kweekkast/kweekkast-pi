@@ -1,7 +1,7 @@
 import time
 from Esp32.CommunicatorDistributer import CommunicatorDistributer
-from ImageCapturing.CameraComponentHandler import CameraComponentHandler
-from ImageCapturing.Triggers.TimerTrigger import TimerTrigger
+from ImageCapturing.camera_component_handler import CameraComponentHandler
+from ImageCapturing.Triggers.timer_trigger import TimerTrigger
 
 
 class Main:
