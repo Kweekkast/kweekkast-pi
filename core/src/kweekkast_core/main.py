@@ -1,6 +1,6 @@
 import time
 
-from kweekkast_common.communicator_distributor import CommunicatorDistributor
+from kweekkast_common.communication_component.communicator_distributor import CommunicatorDistributor
 from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
 from kweekkast_core.image_capturing.triggers.timer_trigger import TimerTrigger
 
