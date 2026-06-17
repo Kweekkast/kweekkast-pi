@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from kweekkast_common.communication_component.Subscriber import Subscriber
 from kweekkast_common.communication_component.connection import ConnectionDevice
+from kweekkast_common.logger_component import file_logger
+from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading
 
 
@@ -18,7 +20,8 @@ class MessageBroker:
         if topic not in self.subscribers:
             self.subscribers[topic] = []
         self.subscribers[topic].append(subscriber)
-        print(f"[Broker] {subscriber.__class__.__name__} gesubscribed op {topic.name}")
+        file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
+                               f"gesubscribed op {topic.name}")
 
     def Unsubscribe(self, topic: ConnectionDevice, subscriber: Subscriber) -> None:
         if topic in self.subscribers:

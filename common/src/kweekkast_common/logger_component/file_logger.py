@@ -17,7 +17,7 @@ class FileLogger(AbstractLogger):
                 file.write(formatted_message + "\n")
                 file.close()
         except Exception as e:
-            console_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__,f"There was an error: {repr(e)}")
+            console_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"There was an error: {repr(e)}")
             self._setup_log_environment()
 
     def _setup_log_environment(self) -> None:
