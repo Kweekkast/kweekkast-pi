@@ -86,13 +86,14 @@ def test_sync_service_fetches_encodes_and_transmits() -> None:
 def test_httpx_client_fetches_and_parses_endpoint_response() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert str(request.url) == "https://example.test/modules"
+        assert request.headers["Authorization"] == "Bearer test-token"
         return httpx.Response(
             200,
             json={"modules": [{"id": 1, "pump": "true", "day": "false", "grow": "true"}]},
         )
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as http_client:
-        client = ModuleCommandClient("https://example.test/modules", client=http_client)
+        client = ModuleCommandClient("https://example.test/modules", client=http_client, api_token="test-token")
 
         assert client.fetch_commands() == [ModuleCommand(module_id=1, pump=True, day=False, grow=True)]
 
@@ -162,10 +163,11 @@ def test_telemetry_client_posts_decoded_json() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         sent_payloads.append(request.read().decode("utf-8"))
         assert str(request.url) == "https://example.test/telemetry"
+        assert request.headers["Authorization"] == "Bearer test-token"
         return httpx.Response(204)
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as http_client:
-        client = ModuleTelemetryClient("https://example.test/telemetry", client=http_client)
+        client = ModuleTelemetryClient("https://example.test/telemetry", client=http_client, api_token="test-token")
         client.upload_telemetry(_telemetry())
 
     assert sent_payloads
