@@ -7,14 +7,14 @@ def test_application_entry_points_are_importable() -> None:
 
 
 def test_cross_package_factories_are_importable() -> None:
-    from kweekkast_common.communicator import Communicator
-    from kweekkast_common.director.director import Director
+    from kweekkast_common.communication_component.communicator import Communicator
+    from kweekkast_common.communication_component.director import Director
     from kweekkast_common.logger_component.file_logger import FileLogger
-    from kweekkast_common.receiver.receiver import Receiver
-    from kweekkast_common.transmitter.transmitter import Transmitter
+    from kweekkast_common.communication_component.receiver import Receiver
+    from kweekkast_common.communication_component.transmitter import Transmitter
     from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
-    from kweekkast_core.listener.serial_connection_listener import SerialConnectionListener
-    from kweekkast_net.connection.wifi_connection import WifiConnection
+    from kweekkast_core.communication_component.listener.serial_connection_listener import SerialConnectionListener
+    from kweekkast_net.communication_component.connection.wifi_connection import WifiConnection
 
     assert Communicator is not None
     assert Director is not None
