@@ -2,7 +2,10 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/kweekkast.iml" filepath="$PROJECT_DIR$/kweekkast.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-common.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-common.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-core.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-net.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-net.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/kweekkast-tests.iml" filepath="$PROJECT_DIR$/.idea/kweekkast-tests.iml" />
     </modules>
   </component>
 </project>

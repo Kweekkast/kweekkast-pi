@@ -1,0 +1,28 @@
+[project]
+name = "kweekkast-core"
+description = "Raspberry Pi responsible for data collection."
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "kweekkast-common",
+    "opencv-python>=4.12",
+    "pyserial>=3.5",
+]
+
+[project.scripts]
+kweekkast-core = "kweekkast_core.main:main"
+
+[tool.uv.sources]
+kweekkast-common = { path = "../common", editable = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8"
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
