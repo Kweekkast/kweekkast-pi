@@ -4,13 +4,17 @@ from Esp32.Connection.Connection import ConnectionDevice
 from Esp32.Broker.Subscriber import Subscriber
 from Esp32.Gpio.GpioDevice import GpioDevice, GpioDeviceType
 
+# gpiozero gebruikt op de Pi 5 de lgpio-backend en werkt daar wel betrouwbaar,
+# in tegenstelling tot RPi.GPIO dat voor de oudere Broadcom-chip is geschreven.
+# We vangen hier niet alleen ImportError op, maar ook eventuele runtime-fouten
+# die tijdens het instellen van een pin kunnen optreden (bv. een ontbrekende
+# of kapotte GPIO-backend), zodat de simulatiemodus altijd een werkend vangnet is.
 try:
-    import RPi.GPIO as GPIO
-    GPIO.setmode(GPIO.BCM)
+    from gpiozero import OutputDevice
     GPIO_AVAILABLE = True
 except ImportError:
     GPIO_AVAILABLE = False
-    print("[GpioController] RPi.GPIO niet beschikbaar, simulatiemodus actief")
+    print("[GpioController] gpiozero niet beschikbaar, simulatiemodus actief")
 
 
 class GpioController(Subscriber):
@@ -32,6 +36,7 @@ class GpioController(Subscriber):
 
     def __init__(self):
         self.devices: dict[tuple, GpioDevice] = {}
+        self.outputs: dict[tuple, "OutputDevice"] = {}
         self.SetupPins()
 
     def SetupPins(self) -> None:
@@ -39,10 +44,25 @@ class GpioController(Subscriber):
             for index, pin in indices.items():
                 device = GpioDevice(deviceType, index, pin)
                 self.devices[(deviceType, index)] = device
+
                 if GPIO_AVAILABLE:
-                    GPIO.setup(pin, GPIO.OUT)
-                    GPIO.output(pin, GPIO.LOW)
+                    self.TrySetupOutput(deviceType, index, pin)
+
                 print(f"[GpioController] Pin {pin} ingesteld voor {deviceType.value} {index}")
+
+    def TrySetupOutput(self, deviceType: GpioDeviceType, index: int, pin: int) -> None:
+        """
+        Probeert een OutputDevice aan te maken voor deze pin. Als dat om
+        welke reden dan ook faalt (bv. backend niet beschikbaar, pin al
+        in gebruik), valt deze ene pin terug op simulatiemodus zonder de
+        rest van de setup te blokkeren.
+        """
+        global GPIO_AVAILABLE
+        try:
+            self.outputs[(deviceType, index)] = OutputDevice(pin, initial_value=False)
+        except Exception as e:
+            print(f"[GpioController] Kon pin {pin} niet instellen ({e}); "
+                  f"{deviceType.value} {index} draait in simulatiemodus")
 
     def Notify(self, reading: Reading) -> None:
         if not reading.valid:
@@ -67,12 +87,21 @@ class GpioController(Subscriber):
 
         device.state = state
 
-        if GPIO_AVAILABLE:
-            GPIO.output(device.pin, GPIO.HIGH if state else GPIO.LOW)
+        output = self.outputs.get((deviceType, index))
+        if output is not None:
+            try:
+                output.on() if state else output.off()
+            except Exception as e:
+                print(f"[GpioController] Kon pin {device.pin} niet aansturen ({e}); "
+                      f"alleen logisch bijgewerkt")
 
         print(f"[GpioController] {deviceType.value} {index} (pin {device.pin}) → {'AAN' if state else 'UIT'}")
 
     def Cleanup(self) -> None:
-        if GPIO_AVAILABLE:
-            GPIO.cleanup()
+        for output in self.outputs.values():
+            try:
+                output.close()
+            except Exception:
+                pass
+        self.outputs.clear()
         print("[GpioController] GPIO opgeruimd")
