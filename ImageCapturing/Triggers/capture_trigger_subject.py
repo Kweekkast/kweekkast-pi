@@ -2,7 +2,7 @@ from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import ConsoleLogger
 from LoggerComponent import FileLogger
 
-class CaptureTrigger_Subject:
+class CaptureTriggerSubject:
     
     def __init__(self):
         self._OBSERVERLIST = []

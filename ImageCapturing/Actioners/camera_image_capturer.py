@@ -1,11 +1,11 @@
-from ImageCapturing.Actioners.abstract_image_capturer import Abstract_ImageCapturer
+from ImageCapturing.Actioners.abstract_image_capturer import AbstractImageCapturer
 from LoggerComponent.LoggerEnum import MessageSeverity
 from LoggerComponent import FileLogger
 import StringFormatter 
 import cv2
 
 
-class ImageCapturer(Abstract_ImageCapturer):
+class ImageCapturer(AbstractImageCapturer):
 
     def __init__(self, VideoCaptureDeviceID):
         self._CAPTURE_DEVICE_ID = VideoCaptureDeviceID

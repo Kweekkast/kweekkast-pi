@@ -1,6 +1,6 @@
-from ImageCapturing.Triggers.abstract_trigger import Abstract_Trigger
+from ImageCapturing.Triggers.abstract_trigger import AbstractTrigger
 
-class ButtonTrigger(Abstract_Trigger):
+class ButtonTrigger(AbstractTrigger):
 
     def __init__(self):
         super().__init__()

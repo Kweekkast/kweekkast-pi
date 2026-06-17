@@ -6,7 +6,7 @@ import cv2
 
 from abc import ABC, abstractmethod
 
-class Abstract_ImageCapturer(ICaptureTriggerObserver, ABC):
+class AbstractImageCapturer(ICaptureTriggerObserver, ABC):
     
     @abstractmethod
     def captureImage():

@@ -1,7 +1,7 @@
-from ImageCapturing.Triggers.capture_trigger_subject import CaptureTrigger_Subject
+from ImageCapturing.Triggers.capture_trigger_subject import CaptureTriggerSubject
 from abc import ABC, abstractmethod
 
-class Abstract_Trigger(CaptureTrigger_Subject, ABC):
+class AbstractTrigger(CaptureTriggerSubject, ABC):
     
     def __init__(self):
         super().__init__()

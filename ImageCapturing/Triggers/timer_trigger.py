@@ -1,9 +1,9 @@
-from ImageCapturing.Triggers.abstract_trigger import Abstract_Trigger
+from ImageCapturing.Triggers.abstract_trigger import AbstractTrigger
 from LoggerComponent import FileLogger
 from LoggerComponent.LoggerEnum import MessageSeverity
 import time
 
-class TimerTrigger(Abstract_Trigger):
+class TimerTrigger(AbstractTrigger):
 
     def __init__(self, sleep_time_seconds):
         super().__init__()
