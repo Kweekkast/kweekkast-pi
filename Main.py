@@ -1,11 +1,14 @@
 import time
 from Esp32.CommunicatorDistributer import CommunicatorDistributer
-from Esp32.Director.EspDirector import EspDirector
-from Esp32.Transmitter.SerialTransmitter import SerialTransmitter
+from ImageCapturing.camera_component_handler import CameraComponentHandler
+from ImageCapturing.Triggers.timer_trigger import TimerTrigger
 
 
 class Main:
     def run(self) -> None:
+        cameraComponentHandler = CameraComponentHandler(TimerTrigger(30),1)
+        cameraComponentHandler.run()
+
         distributer = CommunicatorDistributer()
         distributer.StartAllListeners()
 
