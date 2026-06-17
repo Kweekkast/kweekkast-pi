@@ -12,7 +12,7 @@ class Main:
         distributor = CommunicatorDistributor()
         distributor.StartAllListeners()
 
-        camera_component_handler = CameraComponentHandler(TimerTrigger(30), 1)
+        camera_component_handler = CameraComponentHandler(TimerTrigger(30), 3)
         camera_component_handler.run()
 
         file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
