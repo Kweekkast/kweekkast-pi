@@ -1,8 +1,4 @@
 import threading
-from Esp32.Connection.Connection import Connection, ConnectionDevice
-from Esp32.Communicator import Communicator
-from Esp32.Gpio.GpioController import GpioController
-from Esp32.EspDataHandler import EspDataHandler
 
 from kweekkast_common.communicator import Communicator
 from kweekkast_common.connection.connection import Connection, ConnectionDevice
@@ -10,7 +6,12 @@ from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.observer import Observer
 
-class CommunicatorDistributer:
+from kweekkast_common.Gpio.GpioController import GpioController
+
+from kweekkast_common.EspDataHandler import EspDataHandler
+
+
+class CommunicatorDistributor:
     def __init__(self):
         self.communicators: dict[str, Communicator] = {}
         self.listeners = []

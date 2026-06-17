@@ -1,8 +1,8 @@
 import json
-from Esp32.Reading import Reading
-from Esp32.Connection.Connection import ConnectionDevice
-from Esp32.Broker.Subscriber import Subscriber
-from Esp32.Gpio.GpioDevice import GpioDevice, GpioDeviceType
+
+from kweekkast_common.Broker.Subscriber import Subscriber
+from kweekkast_common.Gpio.GpioDevice import GpioDeviceType, GpioDevice
+from kweekkast_common.reading import Reading
 
 # gpiozero gebruikt op de Pi 5 de lgpio-backend en werkt daar wel betrouwbaar,
 # in tegenstelling tot RPi.GPIO dat voor de oudere Broadcom-chip is geschreven.

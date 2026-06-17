@@ -1,12 +1,7 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from Esp32.CommunicatorDistributer import CommunicatorDistributer
-
-from Esp32.Broker.Subscriber import Subscriber
-from Esp32.Connection.Connection import ConnectionDevice
-from Esp32.Reading import Reading
+from kweekkast_common.Broker.Subscriber import Subscriber
+from kweekkast_common.reading import Reading
 
 
 class EspDataHandler(Subscriber):

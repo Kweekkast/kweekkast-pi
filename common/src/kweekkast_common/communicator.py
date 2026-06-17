@@ -1,13 +1,11 @@
 import threading
 
+from kweekkast_common.Broker.MessageBroker import MessageBroker
 from kweekkast_common.connection.connection import Connection
 from kweekkast_common.director.director import Director
 from kweekkast_common.reading import Reading
 from kweekkast_common.receiver.receiver import Receiver
 from kweekkast_common.subject import Subject
-from Esp32.Broker.MessageBroker import MessageBroker
-from Esp32.Reading import Reading
-from Esp32.Connection.Connection import Connection
 
 
 class Communicator(MessageBroker):

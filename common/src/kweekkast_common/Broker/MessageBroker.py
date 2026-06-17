@@ -1,7 +1,8 @@
 from __future__ import annotations
-from Esp32.Connection.Connection import ConnectionDevice
-from Esp32.Broker.Subscriber import Subscriber
-from Esp32.Reading import Reading
+
+from kweekkast_common.Broker.Subscriber import Subscriber
+from kweekkast_common.connection.connection import ConnectionDevice
+from kweekkast_common.reading import Reading
 
 
 class MessageBroker:

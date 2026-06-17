@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from Esp32.Reading import Reading
+
+from kweekkast_common.reading import Reading
 
 
 class Subscriber(ABC):
