@@ -14,11 +14,11 @@ class Transmitter(ABC):
         # Importeer hier om circulaire imports te vermijden
         match connection.type:
             case ConnectionType.SERIAL:
-                from kweekkast_core.transmitter.serial_transmitter import SerialTransmitter
+                from kweekkast_core.communication_component.transmitter.serial_transmitter import SerialTransmitter
 
                 return SerialTransmitter(connection)
             case ConnectionType.WIFI:
-                from kweekkast_net.transmitter.wifi_transmitter import WifiTransmitter
+                from kweekkast_net.communication_component.transmitter.wifi_transmitter import WifiTransmitter
 
                 return WifiTransmitter(connection)
             case _:

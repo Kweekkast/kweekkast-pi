@@ -28,11 +28,11 @@ class Director(ABC):
     def CreateDirector(communicator: "Communicator") -> "Director":
         match communicator.connection.device:
             case ConnectionDevice.ESP:
-                from kweekkast_core.director.esp_director import EspDirector
+                from kweekkast_core.communication_component.director.esp_director import EspDirector
 
                 return EspDirector(communicator)
             case ConnectionDevice.PI:
-                from kweekkast_core.director.pi_director import PiDirector
+                from kweekkast_core.communication_component.director.pi_director import PiDirector
 
                 return PiDirector(communicator)
             case _:
