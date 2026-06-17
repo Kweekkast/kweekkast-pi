@@ -6,7 +6,6 @@ from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_core.communication_component.EspDataHandler import EspDataHandler
 from kweekkast_common.Gpio.GpioController import GpioController
-from kweekkast_common.EspDataHandler import EspDataHandler
 
 class CommunicatorDistributor:
     def __init__(self):

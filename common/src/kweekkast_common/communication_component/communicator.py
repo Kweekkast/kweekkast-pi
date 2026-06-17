@@ -3,8 +3,8 @@ import threading
 from kweekkast_common.communication_component.MessageBroker import MessageBroker
 from kweekkast_common.communication_component.connection import Connection
 from kweekkast_common.communication_component.director import Director
-from kweekkast_common.reading import Reading
 from kweekkast_common.communication_component.receiver import Receiver
+from kweekkast_common.reading import Reading
 
 
 class Communicator(MessageBroker):

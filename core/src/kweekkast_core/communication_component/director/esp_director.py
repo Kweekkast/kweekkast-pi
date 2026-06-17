@@ -1,4 +1,3 @@
-from kweekkast_common.director.director import Director
 from kweekkast_common.communication_component.director import Director
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
