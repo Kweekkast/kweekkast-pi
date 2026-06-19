@@ -17,22 +17,25 @@ class FileLogger(AbstractLogger):
 
     def _write(self, formatted_message: str) -> None:
         try:
-            with open(SESSION_LOG_FILE_PATH, "a") as file:
+            with open(SESSION_LOG_FILE_PATH, "a", encoding="utf-8") as file:
                 file.write(formatted_message + "\n")
                 file.close()
-        except Exception as e:
-            console_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"There was an error: {repr(e)}")
+        except FileNotFoundError as e:
             self._setup_log_environment()
+            super().log(MessageSeverity.ERROR, self.__class__.__name__, f"There was an error: {repr(e)}")
+        except Exception as e:
+            console_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__, f"There was an error: {repr(e)}")            
+            
 
     def _setup_log_environment(self) -> None:
-        file = Path(SESSION_LOG_DIRECTORY_PATH)
+        file = Path(SESSION_LOG_FILE_PATH)
         directory = Path(SESSION_LOG_DIRECTORY_PATH)
 
         dir_msg = path_creation.check_and_create_dir(directory)
         file_msg = path_creation.check_and_create_file(file)
 
-        super().log(MessageSeverity.DEV, self.__class__.__name__, dir_msg)
-        super().log(MessageSeverity.DEV, self.__class__.__name__, file_msg)
+        super().log(MessageSeverity.DEV, self.__class__.__name__, f"{dir_msg}")
+        super().log(MessageSeverity.DEV, self.__class__.__name__, f"{file_msg}")
 
 
 logger = FileLogger()
