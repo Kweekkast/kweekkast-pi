@@ -1,13 +1,17 @@
-from kweekkast_common import string_formatter
+from kweekkast_common.file_handling import string_formatter
+from kweekkast_common.file_handling import path_creation
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_core.image_capturing.actioners.abstract_image_capturer import AbstractImageCapturer
+from pathlib import Path
 
 
 class CameraImageCapturer(AbstractImageCapturer):
+
     def __init__(self, video_capture_device_id: int):
         self._capture_device_id = video_capture_device_id
         self._claim_capture_device()
+        self.IMAGES_DIRECTORY = string_formatter.create_image_directory(self._capture_device_id)
 
     def _claim_capture_device(self) -> None:
         try:
@@ -34,7 +38,9 @@ class CameraImageCapturer(AbstractImageCapturer):
         except ImportError as exc:
             raise RuntimeError("OpenCV is required for camera image capture. Install opencv-python.") from exc
 
-        new_image_path = string_formatter.create_image_path(self._capture_device_id)
+        directory = Path(self.IMAGES_DIRECTORY)
+        new_image_path = f"{self.IMAGES_DIRECTORY}/{string_formatter.datetime_string()}.png"
+
         if not self._capture_device.isOpened():
             self._claim_capture_device()
             file_logger.logger.log(MessageSeverity.WARNING, self.__class__.__name__, "Attempted to recapture device")
@@ -43,6 +49,9 @@ class CameraImageCapturer(AbstractImageCapturer):
         if not ret:
             self._capture_device.release()
             raise ValueError("Something went wrong. Image could not be captured.")
+
+        dir_msg = path_creation.check_and_create_dir(directory)
+        file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, dir_msg)
 
         cv2.imwrite(new_image_path, frame)
         file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"An image was written to {new_image_path}")
