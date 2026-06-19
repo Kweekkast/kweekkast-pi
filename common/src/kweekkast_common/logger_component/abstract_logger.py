@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from kweekkast_common import string_formatter
+from kweekkast_common.file_handling import string_formatter
 
 
 class AbstractLogger(ABC):
