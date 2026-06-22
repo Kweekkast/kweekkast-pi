@@ -38,7 +38,7 @@ class EspDataHandler(Subscriber):
             messageType = data.get("type")
 
             if messageType == "control":
-                self.HandleControl(data)
+                self.gpioController.Notify(reading)
             elif messageType == "sensor":
                 self.HandleSensor(reading, data)
             else:
@@ -48,19 +48,6 @@ class EspDataHandler(Subscriber):
         except (json.JSONDecodeError, KeyError) as e:
             file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
                                    f"Kon bericht niet verwerken: {reading.message} ({e})")
-
-    def HandleControl(self, data: dict) -> None:
-        """Verwerkt kastbesturing en stuurt GPIO-pinnen aan."""
-        for module in data.get("modules", []):
-            moduleId = int(module["id"])
-
-            for fieldName, deviceType in self.DEVICE_MAP.items():
-                if fieldName in module:
-                    state = module[fieldName] == "on"
-                    self.gpioController.SetPin(deviceType, moduleId, state)
-
-                    file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
-                                           f"Module {moduleId} {fieldName} → {'AAN' if state else 'UIT'}")
 
     def HandleSensor(self, reading: Reading, data: dict) -> None:
         """Stuurt sensordata door naar de Pi-communicator."""

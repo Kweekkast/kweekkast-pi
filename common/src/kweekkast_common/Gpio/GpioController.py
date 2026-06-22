@@ -116,7 +116,7 @@ class GpioController(Subscriber):
                                        f"alleen logisch bijgewerkt")
 
         file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
-                               f"{deviceType.value} {index} (pin {device.pin}) → {'AAN' if state else 'UIT'}")
+                               f"{deviceType.value} {index} (pin {device.pin}) -> {'AAN' if state else 'UIT'}")
 
     def Cleanup(self) -> None:
         for output in self.outputs.values():
