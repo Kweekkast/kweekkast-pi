@@ -28,13 +28,13 @@ class GpioController(Subscriber):
 
     Pinnen (BCM):
       Pompen:          index 1=23, 2=18, 3=17
-      UV lampen:       index 1=6,  2=16, 3=29
+      UV lampen:       index 1=6,  2=16, 3=5
       Daglicht lampen: index 1=24, 2=25, 3=26
     """
 
     PIN_MAP: dict[GpioDeviceType, dict[int, int]] = {
         GpioDeviceType.PUMP:     {1: 23, 2: 18, 3: 17},
-        GpioDeviceType.UV_LAMP:  {1: 6,  2: 16, 3: 29},
+        GpioDeviceType.UV_LAMP:  {1: 6,  2: 16, 3: 5},
         GpioDeviceType.LED_LAMP: {1: 24, 2: 25, 3: 26},
     }
 
