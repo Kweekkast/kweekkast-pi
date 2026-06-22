@@ -20,6 +20,10 @@ class Director(ABC):
     def HandleReading(self, reading: Reading) -> None:
         pass
 
+    @abstractmethod
+    def SendIntializeMessage(self):
+        pass
+
     def SendMessage(self, message: str) -> None:
         self.transmitter.SendMessage(message)
 

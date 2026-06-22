@@ -24,6 +24,7 @@ class Communicator(MessageBroker):
             daemon=True
         )
         self._receiverThread.start()
+        self.director.SendIntializeMessage()
 
     def UpdateReading(self, message: str) -> None:
         self.reading = Reading(message, self.ValidateMessage(message))
