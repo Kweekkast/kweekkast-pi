@@ -2,7 +2,9 @@ from kweekkast_common.communication_component.director import Director
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading
+import json
 
+DEFAULT_INTERVAL_TIME = 30000
 
 class EspDirector(Director):
 
@@ -16,3 +18,11 @@ class EspDirector(Director):
         elif not reading.valid:
             file_logger.logger.log(MessageSeverity.WARNING, self.__class__.__name__, f"Ongeldig bericht: {reading.message}")
             self.SendMessage("NACK")
+
+    def SendIntializeMessage(self):
+        message = json.dumps({
+            "type": "init",
+            "interval": DEFAULT_INTERVAL_TIME
+        })
+        print(message)
+        self.transmitter.SendMessage(message)
