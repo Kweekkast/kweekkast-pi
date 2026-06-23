@@ -1,11 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from enum import Enum
 
 
 # TODO: decouple
 class ConnectionType(Enum):
     SERIAL = 1
-    WIFI = 2
 
 
 # TODO: decouple

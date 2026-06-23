@@ -14,7 +14,6 @@ def test_cross_package_factories_are_importable() -> None:
     from kweekkast_common.communication_component.transmitter import Transmitter
     from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
     from kweekkast_core.communication_component.listener.serial_connection_listener import SerialConnectionListener
-    from kweekkast_net.communication_component.connection.wifi_connection import WifiConnection
 
     assert Communicator is not None
     assert Director is not None
@@ -23,4 +22,3 @@ def test_cross_package_factories_are_importable() -> None:
     assert CameraComponentHandler is not None
     assert FileLogger is not None
     assert SerialConnectionListener is not None
-    assert WifiConnection is not None
