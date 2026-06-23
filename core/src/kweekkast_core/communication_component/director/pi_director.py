@@ -16,3 +16,6 @@ class PiDirector(Director):
         elif not reading.valid:
             # TODO: error bericht eventueel maken
             file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"Ongeldig bericht: {reading.message}")
+
+    def SendIntializeMessage(self):
+        return None

@@ -9,9 +9,10 @@ from kweekkast_net.module_telemetry_client import ModuleTelemetryClient
 
 
 def main() -> None:
-    command_endpoint_url = os.environ.get("KWEEK_ENDPOINT_URL", "http://192.168.72.76:8000/api/output")
-    telemetry_endpoint_url = os.environ.get("KWEEK_TELEMETRY_ENDPOINT_URL", "http://192.168.72.76:8000/api/input")
-    api_token = os.environ.get("KWEEK_API_TOKEN", "cc23350a7459c7e508f9561eddd4701546e60eea")
+    command_endpoint_url = os.environ.get("KWEEK_ENDPOINT_URL")
+    telemetry_endpoint_url = os.environ.get("KWEEK_TELEMETRY_ENDPOINT_URL")
+    api_token = os.environ.get("KWEEK_API_TOKEN") or os.environ.get("KWEEKKAST_API_TOKEN")
+    allow_insecure_http = os.environ.get("KWEEK_ALLOW_INSECURE_HTTP", "false").lower() == "true"
     if not command_endpoint_url and not telemetry_endpoint_url:
         raise SystemExit("KWEEK_ENDPOINT_URL or KWEEK_TELEMETRY_ENDPOINT_URL is required.")
 
@@ -23,7 +24,11 @@ def main() -> None:
     if telemetry_endpoint_url:
         telemetry_uart_port = os.environ.get("KWEEK_CORE_UART_PORT", "/dev/serial0")
         telemetry_baudrate = int(os.environ.get("KWEEK_CORE_UART_BAUD", "115200"))
-        telemetry_client = ModuleTelemetryClient(telemetry_endpoint_url, api_token=api_token)
+        telemetry_client = ModuleTelemetryClient(
+            telemetry_endpoint_url,
+            api_token=api_token,
+            allow_insecure_http=allow_insecure_http,
+        )
         telemetry_receiver = UartModuleTelemetryReceiver(telemetry_client, telemetry_uart_port, telemetry_baudrate)
 
     if command_endpoint_url:
@@ -34,7 +39,11 @@ def main() -> None:
                 daemon=True,
             ).start()
 
-        client = ModuleCommandClient(command_endpoint_url, api_token=api_token)
+        client = ModuleCommandClient(
+            command_endpoint_url,
+            api_token=api_token,
+            allow_insecure_http=allow_insecure_http,
+        )
         transmitter = UartModuleCommandTransmitter(command_uart_port, command_baudrate)
         service = ModuleCommandSyncService(client, transmitter, poll_seconds)
         service.run_forever()

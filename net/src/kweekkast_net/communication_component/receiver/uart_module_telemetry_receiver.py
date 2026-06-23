@@ -20,8 +20,8 @@ class UartModuleTelemetryReceiver:
     def process_bytes(self, data: bytes) -> int:
         uploaded_count = 0
         for frame in self._decoder.feed(data):
-            frame_type, _ = decode_frame(frame)
-            if frame_type != FrameType.MODULE_TELEMETRY_SNAPSHOT:
+            decoded_frame = decode_frame(frame)
+            if decoded_frame.frame_type != FrameType.MODULE_TELEMETRY_SNAPSHOT:
                 continue
 
             telemetry = decode_module_telemetry_frame(frame)

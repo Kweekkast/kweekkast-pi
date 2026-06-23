@@ -1,12 +1,23 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
+import hashlib
 import json
+import math
 import struct
 from typing import Any
+import uuid
+import zlib
 
 
-MAGIC = 0x4B
-MAX_PAYLOAD_LENGTH = 255
+PROTOCOL_VERSION = 1
+MAX_PAYLOAD_LENGTH = 4096
+FRAME_DELIMITER = 0x00
+
+_HEADER = struct.Struct(">BBIH")
+_CRC32 = struct.Struct(">I")
+_MAX_UINT32 = 0xFFFF_FFFF
 
 
 class FrameType(IntEnum):
@@ -37,6 +48,13 @@ class ModuleTelemetry:
     air_humidity: float
 
 
+@dataclass(frozen=True)
+class DecodedFrame:
+    frame_type: FrameType
+    sequence: int
+    payload: bytes
+
+
 TELEMETRY_MODULE_COUNT = 3
 TELEMETRY_MODULE_STRUCT = struct.Struct(">BIhHHhH")
 
@@ -44,6 +62,8 @@ TELEMETRY_MODULE_STRUCT = struct.Struct(">BIhHHhH")
 def parse_module_commands_json(data: Any) -> list[ModuleCommand]:
     if not isinstance(data, dict):
         raise ProtocolError("Endpoint response must be a JSON object.")
+    if data.get("schema_version") != 1:
+        raise ProtocolError("Endpoint response must use schema_version 1.")
 
     modules = data.get("modules")
     if not isinstance(modules, list):
@@ -55,17 +75,24 @@ def parse_module_commands_json(data: Any) -> list[ModuleCommand]:
         if not isinstance(module, dict):
             raise ProtocolError("Each module must be a JSON object.")
 
-        module_id = _parse_module_id(module.get("id"))
+        module_id = _parse_module_id(module.get("module_id"))
         if module_id in seen_ids:
             raise ProtocolError(f"Duplicate module id: {module_id}")
         seen_ids.add(module_id)
 
+        outputs = module.get("outputs")
+        if not isinstance(outputs, dict):
+            raise ProtocolError("Each module must contain an 'outputs' object.")
+        unknown_outputs = set(outputs) - {"pump", "day", "grow"}
+        if unknown_outputs:
+            raise ProtocolError(f"Unknown output fields: {sorted(unknown_outputs)}")
+
         commands.append(
             ModuleCommand(
                 module_id=module_id,
-                pump=_parse_bool_field(module, "pump"),
-                day=_parse_bool_field(module, "day"),
-                grow=_parse_bool_field(module, "grow"),
+                pump=_parse_bool_field(outputs, "pump"),
+                day=_parse_bool_field(outputs, "day"),
+                grow=_parse_bool_field(outputs, "grow"),
             )
         )
 
@@ -123,8 +150,14 @@ def parse_module_telemetry_json(data: Any) -> list[ModuleTelemetry]:
     return telemetry
 
 
-def module_telemetry_to_endpoint_json(telemetry: list[ModuleTelemetry]) -> dict[str, list[dict[str, int | float]]]:
+def module_telemetry_to_endpoint_json(
+    telemetry: list[ModuleTelemetry],
+    *,
+    message_id: uuid.UUID | str | None = None,
+) -> dict[str, Any]:
     return {
+        "schema_version": 1,
+        "message_id": str(message_id or uuid.uuid4()),
         "modules": [
             {
                 "module_id": module.module_id,
@@ -136,34 +169,34 @@ def module_telemetry_to_endpoint_json(telemetry: list[ModuleTelemetry]) -> dict[
                 "air_humidity": module.air_humidity,
             }
             for module in telemetry
-        ]
+        ],
     }
 
 
-def encode_module_command_frame(commands: list[ModuleCommand]) -> bytes:
+def encode_module_command_frame(commands: list[ModuleCommand], *, sequence: int = 0) -> bytes:
     payload = encode_module_command_payload(commands)
-    return encode_frame(FrameType.MODULE_COMMAND_SNAPSHOT, payload)
+    return encode_frame(FrameType.MODULE_COMMAND_SNAPSHOT, payload, sequence=sequence)
 
 
 def decode_module_command_frame(frame: bytes) -> list[ModuleCommand]:
-    frame_type, payload = decode_frame(frame)
-    if frame_type != FrameType.MODULE_COMMAND_SNAPSHOT:
-        raise ProtocolError(f"Unsupported frame type: {frame_type}")
+    decoded_frame = decode_frame(frame)
+    if decoded_frame.frame_type != FrameType.MODULE_COMMAND_SNAPSHOT:
+        raise ProtocolError(f"Unsupported frame type: {decoded_frame.frame_type}")
 
-    return decode_module_command_payload(payload)
+    return decode_module_command_payload(decoded_frame.payload)
 
 
-def encode_module_telemetry_frame(telemetry: list[ModuleTelemetry]) -> bytes:
+def encode_module_telemetry_frame(telemetry: list[ModuleTelemetry], *, sequence: int = 0) -> bytes:
     payload = encode_module_telemetry_payload(telemetry)
-    return encode_frame(FrameType.MODULE_TELEMETRY_SNAPSHOT, payload)
+    return encode_frame(FrameType.MODULE_TELEMETRY_SNAPSHOT, payload, sequence=sequence)
 
 
 def decode_module_telemetry_frame(frame: bytes) -> list[ModuleTelemetry]:
-    frame_type, payload = decode_frame(frame)
-    if frame_type != FrameType.MODULE_TELEMETRY_SNAPSHOT:
-        raise ProtocolError(f"Unsupported frame type: {frame_type}")
+    decoded_frame = decode_frame(frame)
+    if decoded_frame.frame_type != FrameType.MODULE_TELEMETRY_SNAPSHOT:
+        raise ProtocolError(f"Unsupported frame type: {decoded_frame.frame_type}")
 
-    return decode_module_telemetry_payload(payload)
+    return decode_module_telemetry_payload(decoded_frame.payload)
 
 
 def encode_module_command_payload(commands: list[ModuleCommand]) -> bytes:
@@ -279,89 +312,159 @@ def decode_module_telemetry_payload(payload: bytes) -> list[ModuleTelemetry]:
     return telemetry
 
 
-def encode_frame(frame_type: FrameType, payload: bytes) -> bytes:
+def encode_frame(frame_type: FrameType | int, payload: bytes, *, sequence: int = 0) -> bytes:
+    resolved_type = _frame_type(frame_type)
+    if not 0 <= sequence <= _MAX_UINT32:
+        raise ProtocolError("sequence must fit in an unsigned 32-bit integer.")
     if len(payload) > MAX_PAYLOAD_LENGTH:
         raise ProtocolError(f"Payload is too long: {len(payload)} bytes.")
 
-    frame_without_crc = bytes([MAGIC, int(frame_type), len(payload)]) + payload
-    return frame_without_crc + bytes([crc8(frame_without_crc)])
+    body = _HEADER.pack(PROTOCOL_VERSION, resolved_type.value, sequence, len(payload)) + payload
+    checksum = _CRC32.pack(zlib.crc32(body) & _MAX_UINT32)
+    return cobs_encode(body + checksum) + bytes((FRAME_DELIMITER,))
 
 
-def decode_frame(frame: bytes) -> tuple[FrameType, bytes]:
-    if len(frame) < 4:
-        raise ProtocolError("Frame is too short.")
-    if frame[0] != MAGIC:
-        raise ProtocolError("Frame magic byte is invalid.")
+def decode_frame(encoded_frame: bytes, *, max_payload_length: int = MAX_PAYLOAD_LENGTH) -> DecodedFrame:
+    if encoded_frame.endswith(bytes((FRAME_DELIMITER,))):
+        encoded_frame = encoded_frame[:-1]
 
-    try:
-        frame_type = FrameType(frame[1])
-    except ValueError as exc:
-        raise ProtocolError(f"Unknown frame type: {frame[1]}") from exc
+    raw = cobs_decode(encoded_frame)
+    raw_max_length = _HEADER.size + max_payload_length + _CRC32.size
+    if len(raw) < _HEADER.size + _CRC32.size:
+        raise ProtocolError("Frame is shorter than header and CRC.")
+    if len(raw) > raw_max_length:
+        raise ProtocolError(f"Decoded frame is too long: {len(raw)} bytes.")
 
-    payload_length = frame[2]
-    expected_length = 4 + payload_length
-    if len(frame) != expected_length:
-        raise ProtocolError(f"Invalid frame length: expected {expected_length}, got {len(frame)}.")
-
-    expected_crc = crc8(frame[:-1])
-    actual_crc = frame[-1]
+    body = raw[:-_CRC32.size]
+    expected_crc = zlib.crc32(body) & _MAX_UINT32
+    actual_crc = _CRC32.unpack(raw[-_CRC32.size:])[0]
     if actual_crc != expected_crc:
-        raise ProtocolError(f"Invalid frame CRC: expected {expected_crc:#04x}, got {actual_crc:#04x}.")
+        raise ProtocolError("CRC mismatch.")
 
-    return frame_type, frame[3:-1]
+    version, frame_type, sequence, payload_length = _HEADER.unpack(body[: _HEADER.size])
+    if version != PROTOCOL_VERSION:
+        raise ProtocolError(f"Unsupported protocol version: {version}")
+    if payload_length > max_payload_length:
+        raise ProtocolError(f"Payload is too long: {payload_length} bytes.")
+
+    payload = body[_HEADER.size:]
+    if len(payload) != payload_length:
+        raise ProtocolError("Payload length does not match frame header.")
+
+    return DecodedFrame(_frame_type(frame_type), sequence, payload)
 
 
 class FrameStreamDecoder:
-    def __init__(self):
+    def __init__(self, *, max_payload_length: int = MAX_PAYLOAD_LENGTH):
+        raw_max_length = _HEADER.size + max_payload_length + _CRC32.size
+        self.max_payload_length = max_payload_length
+        self.max_encoded_length = max_cobs_encoded_size(raw_max_length)
         self._buffer = bytearray()
+        self._dropping_oversized_frame = False
 
     def feed(self, data: bytes) -> list[bytes]:
-        self._buffer.extend(data)
         frames = []
 
-        while True:
-            magic_index = self._find_magic()
-            if magic_index is None:
+        for value in data:
+            if value == FRAME_DELIMITER:
+                if self._dropping_oversized_frame:
+                    self._dropping_oversized_frame = False
+                    self._buffer.clear()
+                    continue
+                if not self._buffer:
+                    continue
+
+                candidate = bytes(self._buffer)
                 self._buffer.clear()
-                return frames
-            if magic_index > 0:
-                del self._buffer[:magic_index]
-
-            if len(self._buffer) < 3:
-                return frames
-
-            payload_length = self._buffer[2]
-            frame_length = 4 + payload_length
-            if len(self._buffer) < frame_length:
-                return frames
-
-            candidate = bytes(self._buffer[:frame_length])
-            del self._buffer[:frame_length]
-
-            try:
-                decode_frame(candidate)
-            except ProtocolError:
+                try:
+                    decode_frame(candidate, max_payload_length=self.max_payload_length)
+                except ProtocolError:
+                    continue
+                frames.append(candidate)
                 continue
 
-            frames.append(candidate)
+            if self._dropping_oversized_frame:
+                continue
 
-    def _find_magic(self) -> int | None:
-        try:
-            return self._buffer.index(MAGIC)
-        except ValueError:
-            return None
+            self._buffer.append(value)
+            if len(self._buffer) > self.max_encoded_length:
+                self._buffer.clear()
+                self._dropping_oversized_frame = True
+
+        return frames
 
 
-def crc8(data: bytes) -> int:
-    crc = 0
-    for byte in data:
-        crc ^= byte
-        for _ in range(8):
-            if crc & 0x80:
-                crc = ((crc << 1) ^ 0x07) & 0xFF
-            else:
-                crc = (crc << 1) & 0xFF
-    return crc
+def cobs_encode(data: bytes) -> bytes:
+    if not data:
+        return b"\x01"
+
+    encoded = bytearray()
+    block_start = 0
+
+    for index, value in enumerate(data):
+        if value == FRAME_DELIMITER:
+            encoded.append(index - block_start + 1)
+            encoded.extend(data[block_start:index])
+            block_start = index + 1
+        elif index - block_start == 253:
+            encoded.append(0xFF)
+            encoded.extend(data[block_start : index + 1])
+            block_start = index + 1
+
+    if block_start < len(data) or data[-1] == FRAME_DELIMITER:
+        encoded.append(len(data) - block_start + 1)
+        encoded.extend(data[block_start:])
+
+    return bytes(encoded)
+
+
+def cobs_decode(data: bytes) -> bytes:
+    if not data:
+        raise ProtocolError("Empty COBS frame.")
+
+    decoded = bytearray()
+    index = 0
+
+    while index < len(data):
+        code = data[index]
+        if code == FRAME_DELIMITER:
+            raise ProtocolError("COBS frame contains a zero byte.")
+
+        index += 1
+        block_end = index + code - 1
+        if block_end > len(data):
+            raise ProtocolError("COBS block overruns frame.")
+
+        decoded.extend(data[index:block_end])
+        index = block_end
+
+        if code != 0xFF and index < len(data):
+            decoded.append(FRAME_DELIMITER)
+
+    return bytes(decoded)
+
+
+def max_cobs_encoded_size(raw_size: int) -> int:
+    if raw_size < 0:
+        raise ValueError("raw_size must be non-negative")
+    if raw_size == 0:
+        return 1
+    return raw_size + (raw_size // 254) + 1
+
+
+def canonical_command_hash(commands: list[ModuleCommand]) -> str:
+    state = [
+        {
+            "module_id": command.module_id,
+            "outputs": {
+                "pump": command.pump,
+                "day": command.day,
+                "grow": command.grow,
+            },
+        }
+        for command in commands
+    ]
+    return hashlib.sha256(json.dumps(state, separators=(",", ":"), sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def _parse_module_id(value: Any) -> int:
@@ -377,22 +480,17 @@ def _validate_module_id(module_id: int) -> int:
 
 
 def _parse_bool_field(module: dict[str, Any], field_name: str) -> bool:
-    value = module.get(field_name)
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, str):
-        normalized = value.strip().lower()
-        if normalized == "true":
-            return True
-        if normalized == "false":
-            return False
-
-    raise ProtocolError(f"Module field '{field_name}' must be 'true' or 'false'.")
+    if field_name not in module:
+        raise ProtocolError(f"Module field '{field_name}' is required.")
+    value = module[field_name]
+    if not isinstance(value, bool):
+        raise ProtocolError(f"Module field '{field_name}' must be boolean.")
+    return value
 
 
 def _parse_number(value: Any, field_name: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, int | float):
-        raise ProtocolError(f"Telemetry field '{field_name}' must be numeric.")
+    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+        raise ProtocolError(f"Telemetry field '{field_name}' must be finite numeric.")
     return float(value)
 
 
@@ -442,3 +540,10 @@ def _flags_for(command: ModuleCommand) -> int:
     if command.grow:
         flags |= 0b0000_0100
     return flags
+
+
+def _frame_type(value: FrameType | int) -> FrameType:
+    try:
+        return FrameType(value)
+    except ValueError as exc:
+        raise ProtocolError(f"Unknown frame type: {int(value)}") from exc

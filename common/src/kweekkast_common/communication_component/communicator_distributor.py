@@ -4,7 +4,7 @@ from kweekkast_common.communication_component.communicator import Communicator
 from kweekkast_common.communication_component.connection import Connection, ConnectionDevice
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
-from kweekkast_core.communication_component.EspDataHandler import EspDataHandler
+from kweekkast_core.communication_component.esp_data_handler import EspDataHandler
 from kweekkast_common.gpio.gpio_controller import GpioController
 
 class CommunicatorDistributor:

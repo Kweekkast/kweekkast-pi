@@ -17,8 +17,16 @@ class ModuleCommandSyncService:
         self.poll_seconds = poll_seconds
         self.running = True
 
-    def run_once(self) -> list[ModuleCommand]:
+    def run_once(self) -> list[ModuleCommand] | None:
         commands = self.client.fetch_commands()
+        if commands is None:
+            file_logger.logger.log(
+                MessageSeverity.DEV,
+                self.__class__.__name__,
+                "Module command snapshot unchanged.",
+            )
+            return None
+
         frame = encode_module_command_frame(commands)
         self.transmitter.send_frame(frame)
         file_logger.logger.log(

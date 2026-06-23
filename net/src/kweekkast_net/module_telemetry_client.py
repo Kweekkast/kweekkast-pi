@@ -9,11 +9,10 @@ class ModuleTelemetryClient:
         endpoint_url: str,
         timeout_seconds: float = 5.0,
         client: httpx.Client | None = None,
-        allow_insecure_http: bool = True,
+        allow_insecure_http: bool = False,
         api_token: str | None = None,
     ):
-        if not allow_insecure_http and not endpoint_url.startswith("https://"):
-            raise ValueError("Telemetry endpoint must use HTTPS.")
+        _validate_endpoint_url(endpoint_url, allow_insecure_http=allow_insecure_http)
 
         self.endpoint_url = endpoint_url
         self._headers = _authorization_headers(api_token)
@@ -43,4 +42,13 @@ def _authorization_headers(api_token: str | None) -> dict[str, str]:
     if not api_token:
         return {}
 
-    return {"Authorization": f"Bearer {api_token}"}
+    return {"Authorization": f"Token {api_token}"}
+
+
+def _validate_endpoint_url(endpoint_url: str, *, allow_insecure_http: bool) -> None:
+    if endpoint_url.startswith("https://"):
+        return
+    if allow_insecure_http and endpoint_url.startswith(("http://localhost", "http://127.0.0.1")):
+        return
+
+    raise ValueError("Telemetry endpoint must use HTTPS unless explicitly using localhost HTTP for development.")
