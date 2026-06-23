@@ -22,9 +22,13 @@ FRAME_DELIMITER = 0x00
 SIGNED_CONFIG_SCHEMA_VERSION = 2
 SIGNED_CONFIG_PAYLOAD_SCHEMA_VERSION = 1
 SIGNATURE_ALGORITHM = "Ed25519"
+IMAGE_CHUNK_DATA_MAX_LENGTH = 3000
+IMAGE_TRANSFER_MAX_BYTES = 2 * 1024 * 1024
+IMAGE_REASSEMBLY_TIMEOUT_SECONDS = 30.0
 
 _HEADER = struct.Struct(">BBIH")
 _CRC32 = struct.Struct(">I")
+_IMAGE_CHUNK_HEADER = struct.Struct(">16sBIIHH32sH")
 _MAX_UINT32 = 0xFFFF_FFFF
 
 
@@ -32,6 +36,7 @@ class FrameType(IntEnum):
     MODULE_COMMAND_SNAPSHOT = 0x01
     MODULE_TELEMETRY_SNAPSHOT = 0x02
     SIGNED_MODULE_COMMAND_CONFIG = 0x03
+    MODULE_IMAGE_CHUNK = 0x04
 
 
 class ProtocolError(ValueError):
@@ -55,6 +60,27 @@ class ModuleTelemetry:
     water_tds: int
     air_temperature: float
     air_humidity: float
+
+
+@dataclass(frozen=True)
+class ModuleImageChunk:
+    message_id: uuid.UUID
+    module_id: int
+    time: int
+    total_size: int
+    chunk_index: int
+    chunk_count: int
+    sha256: bytes
+    data: bytes
+
+
+@dataclass(frozen=True)
+class CompletedModuleImage:
+    message_id: uuid.UUID
+    module_id: int
+    time: int
+    jpeg_bytes: bytes
+    sha256: bytes
 
 
 @dataclass(frozen=True)
@@ -295,6 +321,56 @@ def decode_module_telemetry_frame(frame: bytes) -> list[ModuleTelemetry]:
     return decode_module_telemetry_payload(decoded_frame.payload)
 
 
+def iter_module_image_chunks(
+    *,
+    message_id: uuid.UUID | str,
+    module_id: int,
+    timestamp: int,
+    image_bytes: bytes,
+    chunk_size: int = IMAGE_CHUNK_DATA_MAX_LENGTH,
+) -> list[ModuleImageChunk]:
+    resolved_message_id = uuid.UUID(str(message_id))
+    _validate_module_id(module_id)
+    _parse_uint(timestamp, "image time", _MAX_UINT32)
+    if not image_bytes:
+        raise ProtocolError("Image bytes may not be empty.")
+    if len(image_bytes) > IMAGE_TRANSFER_MAX_BYTES:
+        raise ProtocolError(f"Image transfer is too large: {len(image_bytes)} bytes.")
+    if not 1 <= chunk_size <= IMAGE_CHUNK_DATA_MAX_LENGTH:
+        raise ProtocolError(f"Image chunk size must be between 1 and {IMAGE_CHUNK_DATA_MAX_LENGTH}.")
+
+    digest = hashlib.sha256(image_bytes).digest()
+    chunk_count = (len(image_bytes) + chunk_size - 1) // chunk_size
+    if chunk_count > 0xFFFF:
+        raise ProtocolError("Image transfer contains too many chunks.")
+
+    return [
+        ModuleImageChunk(
+            message_id=resolved_message_id,
+            module_id=module_id,
+            time=timestamp,
+            total_size=len(image_bytes),
+            chunk_index=index,
+            chunk_count=chunk_count,
+            sha256=digest,
+            data=image_bytes[index * chunk_size : (index + 1) * chunk_size],
+        )
+        for index in range(chunk_count)
+    ]
+
+
+def encode_module_image_chunk_frame(chunk: ModuleImageChunk, *, sequence: int = 0) -> bytes:
+    return encode_frame(FrameType.MODULE_IMAGE_CHUNK, encode_module_image_chunk_payload(chunk), sequence=sequence)
+
+
+def decode_module_image_chunk_frame(frame: bytes) -> ModuleImageChunk:
+    decoded_frame = decode_frame(frame)
+    if decoded_frame.frame_type != FrameType.MODULE_IMAGE_CHUNK:
+        raise ProtocolError(f"Unsupported frame type: {decoded_frame.frame_type}")
+
+    return decode_module_image_chunk_payload(decoded_frame.payload)
+
+
 def encode_module_command_payload(commands: list[ModuleCommand]) -> bytes:
     if len(commands) > 255:
         raise ProtocolError("A frame can contain at most 255 module commands.")
@@ -340,6 +416,72 @@ def decode_module_command_payload(payload: bytes) -> list[ModuleCommand]:
         )
 
     return commands
+
+
+def encode_module_image_chunk_payload(chunk: ModuleImageChunk) -> bytes:
+    _validate_module_id(chunk.module_id)
+    _parse_uint(chunk.time, "image time", _MAX_UINT32)
+    _parse_uint(chunk.total_size, "image total_size", IMAGE_TRANSFER_MAX_BYTES)
+    if chunk.total_size <= 0:
+        raise ProtocolError("Image total_size must be positive.")
+    _parse_uint(chunk.chunk_index, "image chunk_index", 0xFFFF)
+    _parse_uint(chunk.chunk_count, "image chunk_count", 0xFFFF)
+    if chunk.chunk_count == 0:
+        raise ProtocolError("Image chunk_count must be positive.")
+    if chunk.chunk_index >= chunk.chunk_count:
+        raise ProtocolError("Image chunk_index must be lower than chunk_count.")
+    if len(chunk.sha256) != 32:
+        raise ProtocolError("Image sha256 must contain 32 bytes.")
+    if not chunk.data:
+        raise ProtocolError("Image chunk data may not be empty.")
+    if len(chunk.data) > IMAGE_CHUNK_DATA_MAX_LENGTH:
+        raise ProtocolError(f"Image chunk data is too long: {len(chunk.data)} bytes.")
+
+    return (
+        _IMAGE_CHUNK_HEADER.pack(
+            chunk.message_id.bytes,
+            chunk.module_id,
+            chunk.time,
+            chunk.total_size,
+            chunk.chunk_index,
+            chunk.chunk_count,
+            chunk.sha256,
+            len(chunk.data),
+        )
+        + chunk.data
+    )
+
+
+def decode_module_image_chunk_payload(payload: bytes) -> ModuleImageChunk:
+    if len(payload) < _IMAGE_CHUNK_HEADER.size:
+        raise ProtocolError("Image chunk payload is shorter than its header.")
+
+    (
+        raw_message_id,
+        module_id,
+        timestamp,
+        total_size,
+        chunk_index,
+        chunk_count,
+        digest,
+        chunk_length,
+    ) = _IMAGE_CHUNK_HEADER.unpack(payload[: _IMAGE_CHUNK_HEADER.size])
+    data = payload[_IMAGE_CHUNK_HEADER.size :]
+    if len(data) != chunk_length:
+        raise ProtocolError("Image chunk length does not match payload.")
+
+    chunk = ModuleImageChunk(
+        message_id=uuid.UUID(bytes=raw_message_id),
+        module_id=_validate_module_id(module_id),
+        time=_parse_uint(timestamp, "image time", _MAX_UINT32),
+        total_size=_parse_uint(total_size, "image total_size", IMAGE_TRANSFER_MAX_BYTES),
+        chunk_index=_parse_uint(chunk_index, "image chunk_index", 0xFFFF),
+        chunk_count=_parse_uint(chunk_count, "image chunk_count", 0xFFFF),
+        sha256=digest,
+        data=data,
+    )
+    encode_module_image_chunk_payload(chunk)
+    return chunk
 
 
 def encode_module_telemetry_payload(telemetry: list[ModuleTelemetry]) -> bytes:
@@ -490,6 +632,90 @@ class FrameStreamDecoder:
         return frames
 
 
+class ModuleImageReassembler:
+    def __init__(
+        self,
+        *,
+        max_image_bytes: int = IMAGE_TRANSFER_MAX_BYTES,
+        timeout_seconds: float = IMAGE_REASSEMBLY_TIMEOUT_SECONDS,
+        monotonic_clock=None,
+    ):
+        self.max_image_bytes = max_image_bytes
+        self.timeout_seconds = timeout_seconds
+        self._monotonic_clock = monotonic_clock or _default_monotonic_clock
+        self._transfers: dict[uuid.UUID, dict[str, Any]] = {}
+
+    def feed(self, chunk: ModuleImageChunk) -> CompletedModuleImage | None:
+        self.expire_stale()
+        if chunk.total_size > self.max_image_bytes:
+            return None
+
+        transfer = self._transfers.get(chunk.message_id)
+        if transfer is None:
+            transfer = {
+                "module_id": chunk.module_id,
+                "time": chunk.time,
+                "total_size": chunk.total_size,
+                "chunk_count": chunk.chunk_count,
+                "sha256": chunk.sha256,
+                "chunks": {},
+                "created_at": self._monotonic_clock(),
+            }
+            self._transfers[chunk.message_id] = transfer
+        elif not self._chunk_matches_transfer(chunk, transfer):
+            self._transfers.pop(chunk.message_id, None)
+            return None
+
+        chunks = transfer["chunks"]
+        existing_chunk = chunks.get(chunk.chunk_index)
+        if existing_chunk is not None and existing_chunk != chunk.data:
+            self._transfers.pop(chunk.message_id, None)
+            return None
+
+        chunks[chunk.chunk_index] = chunk.data
+        if len(chunks) != transfer["chunk_count"]:
+            return None
+
+        image_bytes = b"".join(chunks[index] for index in range(transfer["chunk_count"]))
+        self._transfers.pop(chunk.message_id, None)
+        if len(image_bytes) != transfer["total_size"]:
+            return None
+        if hashlib.sha256(image_bytes).digest() != transfer["sha256"]:
+            return None
+
+        return CompletedModuleImage(
+            message_id=chunk.message_id,
+            module_id=transfer["module_id"],
+            time=transfer["time"],
+            jpeg_bytes=image_bytes,
+            sha256=transfer["sha256"],
+        )
+
+    def expire_stale(self) -> int:
+        now = self._monotonic_clock()
+        expired_ids = [
+            message_id
+            for message_id, transfer in self._transfers.items()
+            if now - transfer["created_at"] > self.timeout_seconds
+        ]
+        for message_id in expired_ids:
+            self._transfers.pop(message_id, None)
+        return len(expired_ids)
+
+    def pending_count(self) -> int:
+        return len(self._transfers)
+
+    @staticmethod
+    def _chunk_matches_transfer(chunk: ModuleImageChunk, transfer: dict[str, Any]) -> bool:
+        return (
+            chunk.module_id == transfer["module_id"]
+            and chunk.time == transfer["time"]
+            and chunk.total_size == transfer["total_size"]
+            and chunk.chunk_count == transfer["chunk_count"]
+            and chunk.sha256 == transfer["sha256"]
+        )
+
+
 def cobs_encode(data: bytes) -> bytes:
     if not data:
         return b"\x01"
@@ -573,6 +799,12 @@ def base64url_encode(data: bytes) -> str:
 
 def base64url_decode(value: str) -> bytes:
     return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _default_monotonic_clock() -> float:
+    import time
+
+    return time.monotonic()
 
 
 def _validate_signed_config_payload(payload: dict[str, Any]) -> None:
