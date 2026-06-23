@@ -1,6 +1,6 @@
 import threading
 
-from kweekkast_common.communication_component.MessageBroker import MessageBroker
+from kweekkast_common.communication_component.message_broker import MessageBroker
 from kweekkast_common.communication_component.connection import Connection
 from kweekkast_common.communication_component.director import Director
 from kweekkast_common.communication_component.receiver import Receiver
@@ -24,6 +24,7 @@ class Communicator(MessageBroker):
             daemon=True
         )
         self._receiverThread.start()
+        self.director.SendIntializeMessage()
 
     def UpdateReading(self, message: str) -> None:
         self.reading = Reading(message, self.ValidateMessage(message))

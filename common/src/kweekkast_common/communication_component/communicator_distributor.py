@@ -5,14 +5,14 @@ from kweekkast_common.communication_component.connection import Connection, Conn
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_core.communication_component.EspDataHandler import EspDataHandler
-from kweekkast_common.Gpio.GpioController import GpioController
+from kweekkast_common.gpio.gpio_controller import GpioController
 
 class CommunicatorDistributor:
     def __init__(self):
         self.communicators: dict[str, Communicator] = {}
         self.listeners = []
         self.gpioController = GpioController()
-        self.espDataHandler = EspDataHandler(self)
+        self.espDataHandler = EspDataHandler(self, self.gpioController)
 
     def StartAllListeners(self) -> None:
         # Imports hier binnen de methode — zo ontstaat er geen circulaire import

@@ -15,7 +15,7 @@ from kweekkast_common.net_core_protocol import (
     parse_module_commands_json,
     parse_module_telemetry_json,
 )
-from kweekkast_core.communication_component.EspDataHandler import EspDataHandler
+from kweekkast_core.communication_component.esp_data_handler import EspDataHandler
 from kweekkast_net.module_command_client import ModuleCommandClient
 from kweekkast_net.module_command_sync import ModuleCommandSyncService
 from kweekkast_net.module_telemetry_client import ModuleTelemetryClient

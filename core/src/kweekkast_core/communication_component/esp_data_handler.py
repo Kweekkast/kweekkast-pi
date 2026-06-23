@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kweekkast_common.communication_component.Subscriber import Subscriber
+from kweekkast_common.communication_component.subscriber import Subscriber
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.net_core_protocol import ProtocolError, parse_module_telemetry_message
