@@ -2,7 +2,7 @@ import time
 
 from kweekkast_common.logger_component import console_logger, file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
-from kweekkast_common.net_core_protocol import ModuleCommand, encode_module_command_frame
+from kweekkast_common.net_core_protocol import encode_signed_module_command_config_frame
 
 
 class ModuleCommandTransmitter:
@@ -17,9 +17,9 @@ class ModuleCommandSyncService:
         self.poll_seconds = poll_seconds
         self.running = True
 
-    def run_once(self) -> list[ModuleCommand] | None:
-        commands = self.client.fetch_commands()
-        if commands is None:
+    def run_once(self) -> dict | None:
+        envelope = self.client.fetch_signed_config()
+        if envelope is None:
             file_logger.logger.log(
                 MessageSeverity.DEV,
                 self.__class__.__name__,
@@ -27,14 +27,14 @@ class ModuleCommandSyncService:
             )
             return None
 
-        frame = encode_module_command_frame(commands)
+        frame = encode_signed_module_command_config_frame(envelope)
         self.transmitter.send_frame(frame)
         file_logger.logger.log(
             MessageSeverity.DEV,
             self.__class__.__name__,
-            f"Sent module command snapshot containing {len(commands)} modules.",
+            f"Sent signed module command config sequence {envelope['payload']['config_sequence']}.",
         )
-        return commands
+        return envelope
 
     def run_forever(self) -> None:
         try:

@@ -1,6 +1,6 @@
 import httpx
 
-from kweekkast_common.net_core_protocol import ModuleCommand, parse_module_commands_json
+from kweekkast_common.net_core_protocol import validate_signed_command_config_envelope
 
 
 class ModuleCommandClient:
@@ -20,7 +20,7 @@ class ModuleCommandClient:
         self._client = client or httpx.Client(timeout=timeout_seconds)
         self._etag: str | None = None
 
-    def fetch_commands(self) -> list[ModuleCommand] | None:
+    def fetch_signed_config(self) -> dict | None:
         headers = dict(self._headers)
         if self._etag:
             headers["If-None-Match"] = self._etag
@@ -34,7 +34,10 @@ class ModuleCommandClient:
         if etag:
             self._etag = etag
 
-        return parse_module_commands_json(response.json())
+        return validate_signed_command_config_envelope(response.json())
+
+    def fetch_commands(self) -> dict | None:
+        return self.fetch_signed_config()
 
     def close(self) -> None:
         if self._owns_client:

@@ -5,6 +5,8 @@ import uuid
 
 import httpx
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from kweekkast_common.gpio.gpio_controller import GpioController
 from kweekkast_common.gpio.gpio_device import GpioDeviceType
@@ -17,17 +19,22 @@ from kweekkast_common.net_core_protocol import (
     ModuleCommand,
     ModuleTelemetry,
     ProtocolError,
+    base64url_encode,
+    canonical_json_bytes,
     cobs_decode,
     cobs_encode,
     decode_frame,
     decode_module_command_frame,
+    decode_signed_module_command_config_frame,
     decode_module_telemetry_frame,
     encode_frame,
     encode_module_command_frame,
+    encode_signed_module_command_config_frame,
     encode_module_telemetry_frame,
     module_telemetry_to_endpoint_json,
     parse_module_commands_json,
     parse_module_telemetry_json,
+    verify_signed_command_config,
 )
 from kweekkast_common.reading import Reading
 from kweekkast_core.communication_component.actuator_sink import GpioModuleActuatorSink
@@ -60,6 +67,27 @@ def test_module_command_frame_round_trips_with_cobs_crc32() -> None:
     assert frame.endswith(bytes((FRAME_DELIMITER,)))
     assert b"\x00" not in frame[:-1]
     assert decode_module_command_frame(frame[:-1]) == commands
+
+
+def test_signed_module_command_config_frame_round_trips_and_verifies() -> None:
+    envelope = _signed_web_output_json()
+
+    frame = encode_signed_module_command_config_frame(envelope)
+    decoded_envelope = decode_signed_module_command_config_frame(frame[:-1])
+    verified = verify_signed_command_config(decoded_envelope, _public_keys())
+
+    assert frame.endswith(bytes((FRAME_DELIMITER,)))
+    assert b"\x00" not in frame[:-1]
+    assert verified.config_sequence == 1
+    assert verified.commands == [ModuleCommand(module_id=1, pump=True, day=False, grow=True)]
+
+
+def test_signed_module_command_config_rejects_tampering() -> None:
+    envelope = _signed_web_output_json()
+    envelope["payload"]["modules"][0]["outputs"]["pump"] = False
+
+    with pytest.raises(ProtocolError, match="signature verification failed"):
+        verify_signed_command_config(envelope, _public_keys())
 
 
 def test_module_telemetry_frame_round_trips_with_cobs_crc32() -> None:
@@ -151,21 +179,22 @@ def test_parse_web_output_rejects_invalid_contracts(payload: dict) -> None:
 
 def test_httpx_client_fetches_parses_token_auth_and_etag() -> None:
     seen_headers = []
+    envelope = _signed_web_output_json()
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen_headers.append(dict(request.headers))
         assert str(request.url) == "https://example.test/api/output"
         assert request.headers["Authorization"] == "Token test-token"
         if len(seen_headers) == 1:
-            return httpx.Response(200, headers={"ETag": '"state-1"'}, json=_web_output_json())
+            return httpx.Response(200, headers={"ETag": '"state-1"'}, json=envelope)
         assert request.headers["If-None-Match"] == '"state-1"'
         return httpx.Response(304)
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as http_client:
         client = ModuleCommandClient("https://example.test/api/output", client=http_client, api_token="test-token")
 
-        assert client.fetch_commands() == [ModuleCommand(module_id=1, pump=True, day=False, grow=True)]
-        assert client.fetch_commands() is None
+        assert client.fetch_signed_config() == envelope
+        assert client.fetch_signed_config() is None
 
 
 def test_httpx_client_requires_https_by_default_and_allows_localhost_dev_http() -> None:
@@ -184,9 +213,11 @@ def test_sync_service_skips_transmit_when_config_not_modified() -> None:
     assert transmitter.frames == []
 
 
-def test_command_path_fake_web_to_fake_serial_to_fake_actuator_sink() -> None:
+def test_signed_command_path_fake_web_to_fake_serial_to_fake_actuator_sink() -> None:
+    envelope = _signed_web_output_json()
+
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json=_web_output_json())
+        return httpx.Response(200, json=envelope)
 
     serial = FakeSerial()
     sink = FakeActuatorSink()
@@ -194,12 +225,60 @@ def test_command_path_fake_web_to_fake_serial_to_fake_actuator_sink() -> None:
         client = ModuleCommandClient("https://example.test/api/output", client=http_client)
         transmitter = UartModuleCommandTransmitter(serial_connection=serial)
         service = ModuleCommandSyncService(client, transmitter)
-        receiver = UartModuleCommandReceiver(sink, serial_connection=serial)
+        receiver = UartModuleCommandReceiver(sink, serial_connection=serial, public_keys=_public_keys())
 
         service.run_once()
         assert receiver.process_bytes(serial.written) == 1
 
     assert sink.applied == [[ModuleCommand(module_id=1, pump=True, day=False, grow=True)]]
+
+
+def test_core_receiver_rejects_unsigned_command_frames() -> None:
+    serial = FakeSerial()
+    sink = FakeActuatorSink()
+    receiver = UartModuleCommandReceiver(sink, serial_connection=serial, public_keys=_public_keys())
+
+    serial.write(encode_module_command_frame([ModuleCommand(module_id=1, pump=True, day=False, grow=True)]))
+
+    assert receiver.process_bytes(serial.written) == 0
+    assert sink.applied == []
+
+
+def test_core_receiver_rejects_replayed_signed_config_sequence() -> None:
+    serial = FakeSerial()
+    sink = FakeActuatorSink()
+    receiver = UartModuleCommandReceiver(sink, serial_connection=serial, public_keys=_public_keys())
+    frame = encode_signed_module_command_config_frame(_signed_web_output_json(sequence=1))
+
+    assert receiver.process_bytes(frame) == 1
+    assert receiver.process_bytes(frame) == 0
+
+    assert sink.applied == [[ModuleCommand(module_id=1, pump=True, day=False, grow=True)]]
+
+
+def test_core_receiver_applies_safe_state_when_signed_config_expires() -> None:
+    clock = FakeClock()
+    sink = FakeActuatorSink()
+    receiver = UartModuleCommandReceiver(
+        sink,
+        serial_connection=FakeSerial(),
+        public_keys=_public_keys(),
+        monotonic_clock=clock.monotonic,
+        safe_module_ids=(1, 2, 3),
+    )
+    frame = encode_signed_module_command_config_frame(_signed_web_output_json(valid_for_seconds=5))
+
+    assert receiver.process_bytes(frame) == 1
+    assert receiver.apply_safe_state_if_stale() is False
+
+    clock.advance(6)
+
+    assert receiver.apply_safe_state_if_stale() is True
+    assert sink.applied[-1] == [
+        ModuleCommand(module_id=1, pump=False, day=False, grow=False),
+        ModuleCommand(module_id=2, pump=False, day=False, grow=False),
+        ModuleCommand(module_id=3, pump=False, day=False, grow=False),
+    ]
 
 
 def test_parse_telemetry_response_with_three_modules() -> None:
@@ -331,11 +410,11 @@ def test_gpio_actuator_sink_maps_command_outputs_to_gpio_devices() -> None:
 
 
 class FakeCommandClient:
-    def __init__(self, commands: list[ModuleCommand] | None):
-        self.commands = commands
+    def __init__(self, envelope: dict | None):
+        self.envelope = envelope
 
-    def fetch_commands(self) -> list[ModuleCommand] | None:
-        return self.commands
+    def fetch_signed_config(self) -> dict | None:
+        return self.envelope
 
 
 class FakeCommandTransmitter:
@@ -395,6 +474,17 @@ class FakeSerial:
         pass
 
 
+class FakeClock:
+    def __init__(self):
+        self.value = 0.0
+
+    def monotonic(self) -> float:
+        return self.value
+
+    def advance(self, seconds: float) -> None:
+        self.value += seconds
+
+
 def _telemetry() -> list[ModuleTelemetry]:
     return [
         ModuleTelemetry(
@@ -446,7 +536,7 @@ def _web_output_json() -> dict:
     return {
         "schema_version": 1,
         "generated_at": "2026-06-23T12:00:00Z",
-        "state_hash": "state-1",
+        "state_hash": "a" * 64,
         "modules": [
             {
                 "module_id": 1,
@@ -458,6 +548,48 @@ def _web_output_json() -> dict:
             }
         ],
     }
+
+
+def _signed_web_output_json(
+    *,
+    sequence: int = 1,
+    valid_for_seconds: int = 120,
+    key_id: str = "test-key",
+    pump: bool = True,
+    day: bool = False,
+    grow: bool = True,
+) -> dict:
+    payload = _web_output_json()
+    payload["modules"][0]["outputs"] = {
+        "pump": pump,
+        "day": day,
+        "grow": grow,
+    }
+    payload["config_sequence"] = sequence
+    payload["issued_at"] = "2026-06-23T12:00:00Z"
+    payload["valid_for_seconds"] = valid_for_seconds
+    signature = _private_key().sign(canonical_json_bytes(payload))
+    return {
+        "schema_version": 2,
+        "payload": payload,
+        "signature": {
+            "alg": "Ed25519",
+            "key_id": key_id,
+            "value": base64url_encode(signature),
+        },
+    }
+
+
+def _private_key() -> Ed25519PrivateKey:
+    return Ed25519PrivateKey.from_private_bytes(b"0123456789abcdef0123456789abcdef")
+
+
+def _public_keys() -> dict[str, str]:
+    public_key_bytes = _private_key().public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    return {"test-key": base64url_encode(public_key_bytes)}
 
 
 def _raw_frame(*, version: int = PROTOCOL_VERSION, frame_type: int = 1, sequence: int = 1, payload: bytes = b"x") -> bytes:

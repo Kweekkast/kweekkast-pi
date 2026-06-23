@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 from dataclasses import dataclass
 from enum import IntEnum
 import hashlib
@@ -10,10 +12,16 @@ from typing import Any
 import uuid
 import zlib
 
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 
 PROTOCOL_VERSION = 1
 MAX_PAYLOAD_LENGTH = 4096
 FRAME_DELIMITER = 0x00
+SIGNED_CONFIG_SCHEMA_VERSION = 2
+SIGNED_CONFIG_PAYLOAD_SCHEMA_VERSION = 1
+SIGNATURE_ALGORITHM = "Ed25519"
 
 _HEADER = struct.Struct(">BBIH")
 _CRC32 = struct.Struct(">I")
@@ -23,6 +31,7 @@ _MAX_UINT32 = 0xFFFF_FFFF
 class FrameType(IntEnum):
     MODULE_COMMAND_SNAPSHOT = 0x01
     MODULE_TELEMETRY_SNAPSHOT = 0x02
+    SIGNED_MODULE_COMMAND_CONFIG = 0x03
 
 
 class ProtocolError(ValueError):
@@ -53,6 +62,16 @@ class DecodedFrame:
     frame_type: FrameType
     sequence: int
     payload: bytes
+
+
+@dataclass(frozen=True)
+class VerifiedSignedCommandConfig:
+    envelope: dict[str, Any]
+    payload: dict[str, Any]
+    commands: list[ModuleCommand]
+    config_sequence: int
+    valid_for_seconds: int
+    key_id: str
 
 
 TELEMETRY_MODULE_COUNT = 3
@@ -97,6 +116,61 @@ def parse_module_commands_json(data: Any) -> list[ModuleCommand]:
         )
 
     return commands
+
+
+def validate_signed_command_config_envelope(data: Any) -> dict[str, Any]:
+    if not isinstance(data, dict):
+        raise ProtocolError("Signed config envelope must be a JSON object.")
+    if data.get("schema_version") != SIGNED_CONFIG_SCHEMA_VERSION:
+        raise ProtocolError(f"Signed config envelope must use schema_version {SIGNED_CONFIG_SCHEMA_VERSION}.")
+
+    payload = data.get("payload")
+    if not isinstance(payload, dict):
+        raise ProtocolError("Signed config envelope must contain a payload object.")
+    _validate_signed_config_payload(payload)
+
+    signature = data.get("signature")
+    if not isinstance(signature, dict):
+        raise ProtocolError("Signed config envelope must contain a signature object.")
+    if signature.get("alg") != SIGNATURE_ALGORITHM:
+        raise ProtocolError(f"Signed config signature must use {SIGNATURE_ALGORITHM}.")
+    if not isinstance(signature.get("key_id"), str) or not signature["key_id"]:
+        raise ProtocolError("Signed config signature must contain a key_id.")
+    if not isinstance(signature.get("value"), str) or not signature["value"]:
+        raise ProtocolError("Signed config signature must contain a value.")
+
+    return data
+
+
+def verify_signed_command_config(
+    envelope: Any,
+    public_keys: dict[str, str],
+) -> VerifiedSignedCommandConfig:
+    envelope = validate_signed_command_config_envelope(envelope)
+    payload = envelope["payload"]
+    signature = envelope["signature"]
+    key_id = signature["key_id"]
+
+    if key_id not in public_keys:
+        raise ProtocolError(f"Unknown config signing key id: {key_id}")
+
+    try:
+        public_key_bytes = base64url_decode(public_keys[key_id])
+        signature_bytes = base64url_decode(signature["value"])
+        public_key = Ed25519PublicKey.from_public_bytes(public_key_bytes)
+        public_key.verify(signature_bytes, canonical_json_bytes(payload))
+    except (ValueError, binascii.Error, InvalidSignature) as exc:
+        raise ProtocolError("Config signature verification failed.") from exc
+
+    commands = parse_module_commands_json(payload)
+    return VerifiedSignedCommandConfig(
+        envelope=envelope,
+        payload=payload,
+        commands=commands,
+        config_sequence=payload["config_sequence"],
+        valid_for_seconds=payload["valid_for_seconds"],
+        key_id=key_id,
+    )
 
 
 def parse_module_telemetry_message(message: str) -> list[ModuleTelemetry]:
@@ -184,6 +258,28 @@ def decode_module_command_frame(frame: bytes) -> list[ModuleCommand]:
         raise ProtocolError(f"Unsupported frame type: {decoded_frame.frame_type}")
 
     return decode_module_command_payload(decoded_frame.payload)
+
+
+def encode_signed_module_command_config_frame(envelope: dict[str, Any], *, sequence: int = 0) -> bytes:
+    validate_signed_command_config_envelope(envelope)
+    return encode_frame(
+        FrameType.SIGNED_MODULE_COMMAND_CONFIG,
+        canonical_json_bytes(envelope),
+        sequence=sequence,
+    )
+
+
+def decode_signed_module_command_config_frame(frame: bytes) -> dict[str, Any]:
+    decoded_frame = decode_frame(frame)
+    if decoded_frame.frame_type != FrameType.SIGNED_MODULE_COMMAND_CONFIG:
+        raise ProtocolError(f"Unsupported frame type: {decoded_frame.frame_type}")
+
+    try:
+        envelope = json.loads(decoded_frame.payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ProtocolError("Signed module command config frame does not contain valid JSON.") from exc
+
+    return validate_signed_command_config_envelope(envelope)
 
 
 def encode_module_telemetry_frame(telemetry: list[ModuleTelemetry], *, sequence: int = 0) -> bytes:
@@ -465,6 +561,33 @@ def canonical_command_hash(commands: list[ModuleCommand]) -> str:
         for command in commands
     ]
     return hashlib.sha256(json.dumps(state, separators=(",", ":"), sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def canonical_json_bytes(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+
+def base64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def base64url_decode(value: str) -> bytes:
+    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+
+
+def _validate_signed_config_payload(payload: dict[str, Any]) -> None:
+    if payload.get("schema_version") != SIGNED_CONFIG_PAYLOAD_SCHEMA_VERSION:
+        raise ProtocolError(f"Signed config payload must use schema_version {SIGNED_CONFIG_PAYLOAD_SCHEMA_VERSION}.")
+    if not isinstance(payload.get("config_sequence"), int) or payload["config_sequence"] < 0:
+        raise ProtocolError("Signed config payload must contain a non-negative integer config_sequence.")
+    if not isinstance(payload.get("issued_at"), str) or not payload["issued_at"]:
+        raise ProtocolError("Signed config payload must contain issued_at.")
+    if not isinstance(payload.get("valid_for_seconds"), int) or payload["valid_for_seconds"] <= 0:
+        raise ProtocolError("Signed config payload must contain a positive integer valid_for_seconds.")
+    if not isinstance(payload.get("state_hash"), str) or len(payload["state_hash"]) != 64:
+        raise ProtocolError("Signed config payload must contain a 64-character state_hash.")
+
+    parse_module_commands_json(payload)
 
 
 def _parse_module_id(value: Any) -> int:
