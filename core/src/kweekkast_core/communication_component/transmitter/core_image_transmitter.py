@@ -31,6 +31,10 @@ class CoreImageTransmitter:
             self.send_frame(encode_module_image_chunk_frame(chunk))
 
     def send_frame(self, frame: bytes) -> None:
+        write_frame = getattr(self._serial, "write_frame", None)
+        if write_frame:
+            write_frame(frame)
+            return
         self._serial.write(frame)
         self._serial.flush()
 

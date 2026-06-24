@@ -1,6 +1,9 @@
 import os
 import threading
 
+import serial
+
+from kweekkast_common.serial_frame_transport import SerialFrameTransport
 from kweekkast_net.communication_component.receiver.uart_core_data_receiver import UartCoreDataReceiver
 from kweekkast_net.communication_component.transmitter.uart_module_command_transmitter import UartModuleCommandTransmitter
 from kweekkast_net.module_command_client import ModuleCommandClient
@@ -21,11 +24,12 @@ def main() -> None:
     command_uart_port = os.environ.get("KWEEK_NET_UART_PORT", "/dev/serial0")
     command_baudrate = int(os.environ.get("KWEEK_NET_UART_BAUD", "115200"))
     poll_seconds = float(os.environ.get("KWEEK_POLL_SECONDS", "10"))
+    core_uart = None
+    if command_endpoint_url or telemetry_endpoint_url or image_endpoint_url:
+        core_uart = SerialFrameTransport(serial.Serial(port=command_uart_port, baudrate=command_baudrate, timeout=1))
 
     core_data_receiver = None
     if telemetry_endpoint_url or image_endpoint_url:
-        core_uart_port = os.environ.get("KWEEK_CORE_UART_PORT", "/dev/serial0")
-        core_baudrate = int(os.environ.get("KWEEK_CORE_UART_BAUD", "115200"))
         telemetry_client = ModuleTelemetryClient(
             telemetry_endpoint_url,
             api_token=api_token,
@@ -36,7 +40,7 @@ def main() -> None:
             api_token=api_token,
             allow_insecure_http=allow_insecure_http,
         ) if image_endpoint_url else None
-        core_data_receiver = UartCoreDataReceiver(telemetry_client, image_client, core_uart_port, core_baudrate)
+        core_data_receiver = UartCoreDataReceiver(telemetry_client, image_client, serial_connection=core_uart)
 
     if command_endpoint_url:
         if core_data_receiver:
@@ -51,7 +55,7 @@ def main() -> None:
             api_token=api_token,
             allow_insecure_http=allow_insecure_http,
         )
-        transmitter = UartModuleCommandTransmitter(command_uart_port, command_baudrate)
+        transmitter = UartModuleCommandTransmitter(serial_connection=core_uart)
         service = ModuleCommandSyncService(client, transmitter, poll_seconds)
         service.run_forever()
     elif core_data_receiver:

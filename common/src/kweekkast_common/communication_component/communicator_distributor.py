@@ -8,11 +8,11 @@ from kweekkast_core.communication_component.esp_data_handler import EspDataHandl
 from kweekkast_common.gpio.gpio_controller import GpioController
 
 class CommunicatorDistributor:
-    def __init__(self):
+    def __init__(self, telemetry_transmitter=None):
         self.communicators: dict[str, Communicator] = {}
         self.listeners = []
         self.gpioController = GpioController()
-        self.espDataHandler = EspDataHandler(self, self.gpioController)
+        self.espDataHandler = EspDataHandler(self, self.gpioController, telemetry_transmitter=telemetry_transmitter)
 
     def StartAllListeners(self) -> None:
         # Imports hier binnen de methode — zo ontstaat er geen circulaire import
