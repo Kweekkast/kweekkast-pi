@@ -13,7 +13,7 @@ class CommunicatorDistributor:
         self.communicators: dict[str, Communicator] = {}
         self.listeners = []
         self.gpioController = GpioController()
-        self.espDataHandler = EspDataHandler(self)
+        self.espDataHandler = EspDataHandler(self, self.gpioController)
 
     def StartAllListeners(self) -> None:
         # Imports hier binnen de methode — zo ontstaat er geen circulaire import
