@@ -62,11 +62,24 @@ def test_serial_frame_transport_writes_and_flushes_complete_frames() -> None:
     assert serial_connection.close_count == 1
 
 
+def test_core_serial_transmitter_newline_terminates_ack_messages_for_esp() -> None:
+    from kweekkast_core.communication_component.transmitter.serial_transmitter import SerialTransmitter
+
+    serial_connection = FakeConnection()
+    transmitter = SerialTransmitter(serial_connection)
+
+    transmitter.SendMessage("ACK")
+
+    assert serial_connection.serial.written == [b"ACK\n"]
+    assert serial_connection.serial.flush_count == 1
+
+
 class FakeSerial:
     def __init__(self):
         self.written = []
         self.flush_count = 0
         self.close_count = 0
+        self.is_open = True
 
     def write(self, data: bytes) -> int:
         self.written.append(data)
@@ -80,3 +93,8 @@ class FakeSerial:
 
     def close(self) -> None:
         self.close_count += 1
+
+
+class FakeConnection:
+    def __init__(self):
+        self.serial = FakeSerial()
