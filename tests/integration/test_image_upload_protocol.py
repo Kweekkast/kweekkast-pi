@@ -96,10 +96,11 @@ def test_encode_image_chunk_rejects_oversized_data() -> None:
 
 def test_core_fake_camera_frame_is_converted_to_jpeg_and_sent() -> None:
     transmitter = FakeImageTransmitter()
+    capture_device = FakeCaptureDevice()
     capturer = CameraImageCapturer(
         0,
         module_id=1,
-        capture_device=FakeCaptureDevice(),
+        capture_device=capture_device,
         image_transmitter=transmitter,
         save_png=False,
     )
@@ -111,6 +112,27 @@ def test_core_fake_camera_frame_is_converted_to_jpeg_and_sent() -> None:
     assert captured.camera_device_id == 0
     assert captured.jpeg_bytes.startswith(b"\xff\xd8")
     assert transmitter.images[0].jpeg_bytes.startswith(b"\xff\xd8")
+    assert capture_device.release_count == 0
+
+
+def test_core_camera_owned_device_is_released_after_each_capture(monkeypatch) -> None:
+    opened_devices = []
+
+    def claim_fake_device(self) -> None:
+        device = FakeCaptureDevice()
+        opened_devices.append(device)
+        self._capture_device = device
+
+    monkeypatch.setattr(CameraImageCapturer, "_claim_capture_device", claim_fake_device)
+    capturer = CameraImageCapturer(4, module_id=3, save_png=False)
+
+    first = capturer.capture_image()
+    second = capturer.capture_image()
+
+    assert first.camera_device_id == 4
+    assert second.camera_device_id == 4
+    assert len(opened_devices) == 2
+    assert [device.release_count for device in opened_devices] == [1, 1]
 
 
 def test_camera_device_ids_default_and_env_override() -> None:
@@ -208,15 +230,20 @@ class FakeClock:
 
 
 class FakeCaptureDevice:
+    def __init__(self):
+        self.opened = True
+        self.release_count = 0
+
     def isOpened(self) -> bool:
-        return True
+        return self.opened
 
     def read(self):
         frame = np.full((480, 640, 3), 127, dtype=np.uint8)
         return True, frame
 
     def release(self) -> None:
-        pass
+        self.opened = False
+        self.release_count += 1
 
 
 class FakeImageTransmitter:
