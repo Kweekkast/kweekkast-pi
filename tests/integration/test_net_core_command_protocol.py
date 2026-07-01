@@ -38,7 +38,7 @@ from kweekkast_common.net_core_protocol import (
 )
 from kweekkast_common.reading import Reading
 from kweekkast_core.communication_component.actuator_sink import GpioModuleActuatorSink
-from kweekkast_core.communication_component.esp_data_handler import EspDataHandler
+from kweekkast_core.communication_component.esp_data_handler import EspDataHandler, legacy_esp_json_to_module_telemetry
 from kweekkast_core.communication_component.receiver.uart_module_command_receiver import UartModuleCommandReceiver
 from kweekkast_net.communication_component.receiver.uart_module_telemetry_receiver import UartModuleTelemetryReceiver
 from kweekkast_net.communication_component.transmitter.uart_module_command_transmitter import UartModuleCommandTransmitter
@@ -306,6 +306,85 @@ def test_esp_data_handler_converts_valid_reading_to_telemetry_frame() -> None:
     assert transmitter.telemetry == [_telemetry()]
 
 
+def test_legacy_esp_json_maps_to_module_telemetry() -> None:
+    telemetry = legacy_esp_json_to_module_telemetry(_legacy_esp_payload(2), timestamp=1781712000)
+
+    assert telemetry == ModuleTelemetry(
+        module_id=2,
+        time=1781712000,
+        water_temperature=21.6875,
+        water_ph=7.866212,
+        water_tds=113,
+        air_temperature=24.8,
+        air_humidity=22.0,
+    )
+
+
+def test_esp_data_handler_buffers_legacy_esp_readings_until_three_modules_arrive() -> None:
+    transmitter = FakeTelemetryTransmitter()
+    clock = FakeUnixClock(1781712000)
+    handler = EspDataHandler(None, telemetry_transmitter=transmitter, clock=clock.time)
+
+    handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(2)), valid=True))
+    handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(1)), valid=True))
+
+    assert transmitter.telemetry == []
+
+    handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(3)), valid=True))
+
+    assert len(transmitter.telemetry) == 1
+    assert [module.module_id for module in transmitter.telemetry[0]] == [1, 2, 3]
+    assert transmitter.telemetry[0][0].water_temperature == 22.5
+    assert transmitter.telemetry[0][1].water_temperature == 21.6875
+    assert transmitter.telemetry[0][2].water_temperature == 22.1875
+
+
+def test_esp_data_handler_ignores_non_json_esp_debug_lines() -> None:
+    transmitter = FakeTelemetryTransmitter()
+    handler = EspDataHandler(None, telemetry_transmitter=transmitter)
+
+    handler.Notify(Reading(message="[readPH]... phValue 7.24", valid=True))
+
+    assert transmitter.telemetry == []
+
+
+def test_esp_data_handler_ignores_legacy_esp_readings_for_unexpected_modules() -> None:
+    transmitter = FakeTelemetryTransmitter()
+    handler = EspDataHandler(None, telemetry_transmitter=transmitter)
+    payload = _legacy_esp_payload(1)
+    payload["ModuleActive"] = 4
+
+    handler.Notify(Reading(message=json.dumps(payload), valid=True))
+
+    assert transmitter.telemetry == []
+
+
+def test_legacy_esp_path_fake_esp_to_fake_serial_to_fake_web() -> None:
+    sent_payloads = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent_payloads.append(json.loads(request.read().decode("utf-8")))
+        return httpx.Response(201, json={"status": "ok"})
+
+    serial = FakeSerial()
+    core_transmitter = FakeTelemetryTransmitter(serial=serial)
+    clock = FakeUnixClock(1781712000)
+    esp_handler = EspDataHandler(None, telemetry_transmitter=core_transmitter, clock=clock.time)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as http_client:
+        telemetry_client = ModuleTelemetryClient("https://example.test/api/input", client=http_client)
+        net_receiver = UartModuleTelemetryReceiver(telemetry_client, serial_connection=serial)
+
+        esp_handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(1)), valid=True))
+        esp_handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(2)), valid=True))
+        esp_handler.Notify(Reading(message=json.dumps(_legacy_esp_payload(3)), valid=True))
+        assert net_receiver.process_bytes(serial.written) == 1
+
+    assert sent_payloads[0]["schema_version"] == 1
+    assert [module["module_id"] for module in sent_payloads[0]["modules"]] == [1, 2, 3]
+    assert sent_payloads[0]["modules"][0]["water_temperature"] == 22.5
+
+
 def test_esp_data_handler_drops_invalid_telemetry() -> None:
     transmitter = FakeTelemetryTransmitter()
     handler = EspDataHandler(None, telemetry_transmitter=transmitter)
@@ -485,6 +564,14 @@ class FakeClock:
         self.value += seconds
 
 
+class FakeUnixClock:
+    def __init__(self, value: int):
+        self.value = value
+
+    def time(self) -> int:
+        return self.value
+
+
 def _telemetry() -> list[ModuleTelemetry]:
     return [
         ModuleTelemetry(
@@ -530,6 +617,36 @@ def _telemetry_json() -> dict:
 
 def _telemetry_message() -> str:
     return json.dumps(_telemetry_json()["modules_only"])
+
+
+def _legacy_esp_payload(module_id: int) -> dict:
+    payloads = {
+        1: {
+            "ModuleActive": 1,
+            "WaterTemperatuur": 22.5,
+            "PH_Water": 7.103582,
+            "TDS_Water": 54.3889,
+            "KamerTemperatuur": 27.6,
+            "LuchtVochtigheidKamer": 35,
+        },
+        2: {
+            "ModuleActive": 2,
+            "WaterTemperatuur": 21.6875,
+            "PH_Water": 7.866212,
+            "TDS_Water": 112.7509,
+            "KamerTemperatuur": 24.8,
+            "LuchtVochtigheidKamer": 22,
+        },
+        3: {
+            "ModuleActive": 3,
+            "WaterTemperatuur": 22.1875,
+            "PH_Water": 7.244306,
+            "TDS_Water": 72.64769,
+            "KamerTemperatuur": 26.7,
+            "LuchtVochtigheidKamer": 28,
+        },
+    }
+    return payloads[module_id]
 
 
 def _web_output_json() -> dict:
