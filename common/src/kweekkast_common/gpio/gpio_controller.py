@@ -97,12 +97,15 @@ class GpioController(Subscriber):
             file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
                                    f"Kon bericht niet verwerken: {reading.message} ({e})")
 
-    def SetPin(self, deviceType: GpioDeviceType, index: int, state: bool) -> None:
+    def SetPin(self, deviceType: GpioDeviceType, index: int, state: bool) -> bool:
         device = self.devices.get((deviceType, index))
         if not device:
             file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
                                    f"Onbekend apparaat: {deviceType.value} {index}")
-            return
+            return False
+
+        if device.state == state:
+            return False
 
         device.state = state
 
@@ -117,6 +120,7 @@ class GpioController(Subscriber):
 
         file_logger.logger.log(MessageSeverity.INFO, self.__class__.__name__,
                                f"{deviceType.value} {index} (pin {device.pin}) -> {'AAN' if state else 'UIT'}")
+        return True
 
     def Cleanup(self) -> None:
         for output in self.outputs.values():

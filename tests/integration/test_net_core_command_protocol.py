@@ -256,6 +256,28 @@ def test_core_receiver_rejects_replayed_signed_config_sequence() -> None:
     assert sink.applied == [[ModuleCommand(module_id=1, pump=True, day=False, grow=True)]]
 
 
+def test_core_receiver_accepts_unchanged_new_sequence_without_reapplying_outputs() -> None:
+    clock = FakeClock()
+    sink = FakeActuatorSink()
+    receiver = UartModuleCommandReceiver(
+        sink,
+        serial_connection=FakeSerial(),
+        public_keys=_public_keys(),
+        monotonic_clock=clock.monotonic,
+    )
+    first_frame = encode_signed_module_command_config_frame(_signed_web_output_json(sequence=1, valid_for_seconds=5))
+    second_frame = encode_signed_module_command_config_frame(_signed_web_output_json(sequence=2, valid_for_seconds=5))
+
+    assert receiver.process_bytes(first_frame) == 1
+    clock.advance(4)
+    assert receiver.process_bytes(second_frame) == 1
+    clock.advance(4)
+
+    assert sink.applied == [[ModuleCommand(module_id=1, pump=True, day=False, grow=True)]]
+    assert receiver.last_accepted_sequence == 2
+    assert receiver.apply_safe_state_if_stale() is False
+
+
 def test_core_receiver_applies_safe_state_when_signed_config_expires() -> None:
     clock = FakeClock()
     sink = FakeActuatorSink()
@@ -488,6 +510,25 @@ def test_gpio_actuator_sink_maps_command_outputs_to_gpio_devices() -> None:
     assert controller.devices[(GpioDeviceType.UV_LAMP, 1)].state is True
 
 
+def test_gpio_controller_only_drives_output_when_state_changes() -> None:
+    controller = GpioController()
+    output = FakeGpioOutput()
+    controller.outputs[(GpioDeviceType.PUMP, 1)] = output
+
+    assert controller.SetPin(GpioDeviceType.PUMP, 1, False) is False
+    assert output.on_count == 0
+    assert output.off_count == 0
+
+    assert controller.SetPin(GpioDeviceType.PUMP, 1, True) is True
+    assert controller.SetPin(GpioDeviceType.PUMP, 1, True) is False
+    assert output.on_count == 1
+    assert output.off_count == 0
+
+    assert controller.SetPin(GpioDeviceType.PUMP, 1, False) is True
+    assert output.on_count == 1
+    assert output.off_count == 1
+
+
 class FakeCommandClient:
     def __init__(self, envelope: dict | None):
         self.envelope = envelope
@@ -529,6 +570,18 @@ class FakeActuatorSink:
 
     def apply(self, commands: list[ModuleCommand]) -> None:
         self.applied.append(commands)
+
+
+class FakeGpioOutput:
+    def __init__(self):
+        self.on_count = 0
+        self.off_count = 0
+
+    def on(self) -> None:
+        self.on_count += 1
+
+    def off(self) -> None:
+        self.off_count += 1
 
 
 class FakeSerial:

@@ -12,6 +12,7 @@ from kweekkast_common.net_core_protocol import (
     FrameType,
     ModuleCommand,
     ProtocolError,
+    canonical_command_hash,
     decode_frame,
     decode_signed_module_command_config_frame,
     verify_signed_command_config,
@@ -82,6 +83,7 @@ class UartModuleCommandReceiver:
         self._monotonic_clock = monotonic_clock
         self._valid_until_monotonic: float | None = None
         self._safe_state_applied_for_deadline = _UNSET
+        self._last_applied_command_hash: str | None = None
         self.running = True
         self._decoder = FrameStreamDecoder()
         self._serial = serial_connection or serial.Serial(port=port, baudrate=baudrate, timeout=1)
@@ -120,17 +122,24 @@ class UartModuleCommandReceiver:
                 continue
 
             commands = verified_config.commands
-            self.handler.apply(commands)
+            command_state_changed = self._apply_commands_if_changed(commands)
             self.last_accepted_sequence = verified_config.config_sequence
             self.sequence_store.save(verified_config.config_sequence)
             self._valid_until_monotonic = self._monotonic_clock() + verified_config.valid_for_seconds
             self._safe_state_applied_for_deadline = _UNSET
             applied_count += 1
-            file_logger.logger.log(
-                MessageSeverity.INFO,
-                self.__class__.__name__,
-                f"Signed module command config sequence {verified_config.config_sequence} met {len(commands)} modules toegepast",
-            )
+            if command_state_changed:
+                file_logger.logger.log(
+                    MessageSeverity.INFO,
+                    self.__class__.__name__,
+                    f"Signed module command config sequence {verified_config.config_sequence} met {len(commands)} modules toegepast",
+                )
+            else:
+                file_logger.logger.log(
+                    MessageSeverity.DEV,
+                    self.__class__.__name__,
+                    f"Signed module command config sequence {verified_config.config_sequence} geaccepteerd; outputs ongewijzigd",
+                )
 
         return applied_count
 
@@ -155,13 +164,29 @@ class UartModuleCommandReceiver:
             ModuleCommand(module_id=module_id, pump=False, day=False, grow=False)
             for module_id in self.safe_module_ids
         ]
-        self.handler.apply(safe_commands)
+        command_state_changed = self._apply_commands_if_changed(safe_commands)
         self._safe_state_applied_for_deadline = deadline
-        file_logger.logger.log(
-            MessageSeverity.WARNING,
-            self.__class__.__name__,
-            "No fresh signed module command config is active; safe state applied.",
-        )
+        if command_state_changed:
+            file_logger.logger.log(
+                MessageSeverity.WARNING,
+                self.__class__.__name__,
+                "No fresh signed module command config is active; safe state applied.",
+            )
+        else:
+            file_logger.logger.log(
+                MessageSeverity.WARNING,
+                self.__class__.__name__,
+                "No fresh signed module command config is active; safe state was already active.",
+            )
+        return True
+
+    def _apply_commands_if_changed(self, commands: list[ModuleCommand]) -> bool:
+        command_hash = canonical_command_hash(commands)
+        if self._last_applied_command_hash == command_hash:
+            return False
+
+        self.handler.apply(commands)
+        self._last_applied_command_hash = command_hash
         return True
 
     def start_listening(self) -> None:
