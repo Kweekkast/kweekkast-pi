@@ -205,12 +205,29 @@ class UartModuleCommandReceiver:
 
 def load_public_keys_from_env(env_name: str = "KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON") -> dict[str, str]:
     raw_value = os.environ.get(env_name)
-    if not raw_value:
-        return {}
+    if not raw_value or not raw_value.strip():
+        raise ValueError(
+            f"{env_name} is required. Set it to a JSON object mapping signing key ids "
+            "to base64url Ed25519 public keys."
+        )
 
-    data = json.loads(raw_value)
-    if not isinstance(data, dict) or not all(isinstance(key, str) and isinstance(value, str) for key, value in data.items()):
-        raise ValueError(f"{env_name} must contain a JSON object mapping key id strings to base64url public keys.")
+    try:
+        data = json.loads(raw_value)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{env_name} must contain valid JSON.") from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{env_name} must contain a JSON object mapping key ids to base64url public keys.")
+    if not data:
+        raise ValueError(f"{env_name} must contain at least one public key.")
+    if not all(
+        isinstance(key, str)
+        and key.strip()
+        and isinstance(value, str)
+        and value.strip()
+        for key, value in data.items()
+    ):
+        raise ValueError(f"{env_name} must map non-empty key id strings to non-empty base64url public key strings.")
 
     return data
 

@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_application_entry_points_are_importable() -> None:
     from kweekkast_core.main import main as core_main
     from kweekkast_net.main import main as net_main
@@ -29,6 +32,7 @@ def test_core_main_reuses_one_uart_transport_for_net_pi_paths(monkeypatch) -> No
 
     serial_connection = FakeSerial()
     monkeypatch.setattr(core_main_module.serial, "Serial", lambda **kwargs: serial_connection)
+    monkeypatch.setenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", '{"test-key":"test-public-key"}')
 
     main = core_main_module.Main()
     transport = main._open_net_uart()
@@ -44,6 +48,50 @@ def test_core_main_reuses_one_uart_transport_for_net_pi_paths(monkeypatch) -> No
     telemetry_transmitter.close()
     command_receiver.close()
     assert serial_connection.close_count == 1
+
+
+def test_net_main_requires_api_token(monkeypatch) -> None:
+    import kweekkast_net.main as net_main_module
+
+    monkeypatch.delenv("KWEEK_API_TOKEN", raising=False)
+
+    with pytest.raises(SystemExit, match="KWEEK_API_TOKEN"):
+        net_main_module.api_token_from_env()
+
+
+def test_net_main_accepts_api_token(monkeypatch) -> None:
+    import kweekkast_net.main as net_main_module
+
+    monkeypatch.setenv("KWEEK_API_TOKEN", " current-token ")
+
+    assert net_main_module.api_token_from_env() == "current-token"
+
+
+def test_core_receiver_requires_public_signing_keys_env(monkeypatch) -> None:
+    from kweekkast_core.communication_component.receiver.uart_module_command_receiver import load_public_keys_from_env
+
+    monkeypatch.delenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+
+    with pytest.raises(ValueError, match="KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON"):
+        load_public_keys_from_env()
+
+
+def test_core_receiver_rejects_empty_public_signing_key_map(monkeypatch) -> None:
+    from kweekkast_core.communication_component.receiver.uart_module_command_receiver import load_public_keys_from_env
+
+    monkeypatch.setenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", "{}")
+
+    with pytest.raises(ValueError, match="at least one public key"):
+        load_public_keys_from_env()
+
+
+def test_core_main_fails_fast_when_command_signing_keys_are_missing(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.delenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+
+    with pytest.raises(ValueError, match="KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON"):
+        core_main_module.Main()._create_command_receiver(FakeSerial())
 
 
 def test_core_main_defaults_image_queue_size_to_camera_device_count(monkeypatch) -> None:

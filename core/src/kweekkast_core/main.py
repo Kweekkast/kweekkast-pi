@@ -122,9 +122,9 @@ class Main:
             file_logger.logger.log(
                 MessageSeverity.ERROR,
                 self.__class__.__name__,
-                f"Command UART receiver niet beschikbaar; actuatoren ontvangen geen signed config: {exc!r}",
+                f"Command UART receiver kon niet starten; core stopt zodat actuatorconfiguratie niet stil uitvalt: {exc!r}",
             )
-            return None
+            raise
 
 
 def main() -> None:

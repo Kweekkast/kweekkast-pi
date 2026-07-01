@@ -1,4 +1,5 @@
 import json
+import os
 
 from kweekkast_common.subscriber import Subscriber
 from kweekkast_common.gpio.gpio_device import GpioDeviceType, GpioDevice
@@ -9,9 +10,14 @@ from kweekkast_common.reading import Reading
 try:
     from gpiozero import OutputDevice
     GPIO_AVAILABLE = True
-except ImportError:
+    GPIO_IMPORT_ERROR = None
+except ImportError as exc:
     GPIO_AVAILABLE = False
-    print("[GpioController] gpiozero niet beschikbaar, simulatiemodus actief")
+    GPIO_IMPORT_ERROR = exc
+
+
+def gpio_required() -> bool:
+    return os.environ.get("KWEEK_REQUIRE_GPIO", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 
 class GpioController(Subscriber):
@@ -51,6 +57,19 @@ class GpioController(Subscriber):
         self.SetupPins()
 
     def SetupPins(self) -> None:
+        if not GPIO_AVAILABLE:
+            message = (
+                "gpiozero niet beschikbaar; GPIO draait in simulatiemodus. "
+                "Installeer gpiozero/lgpio of zet KWEEK_REQUIRE_GPIO=false voor ontwikkeling."
+            )
+            if gpio_required():
+                raise RuntimeError(
+                    "KWEEK_REQUIRE_GPIO=true maar gpiozero is niet beschikbaar. "
+                    "Installeer gpiozero en lgpio op de core Pi."
+                ) from GPIO_IMPORT_ERROR
+
+            file_logger.logger.log(MessageSeverity.WARNING, self.__class__.__name__, message)
+
         for deviceType, indices in self.PIN_MAP.items():
             for index, pin in indices.items():
                 device = GpioDevice(deviceType, index, pin)
@@ -63,10 +82,15 @@ class GpioController(Subscriber):
                                        f"Pin {pin} ingesteld voor {deviceType.value} {index}")
 
     def TrySetupOutput(self, deviceType: GpioDeviceType, index: int, pin: int) -> None:
-        global GPIO_AVAILABLE
         try:
             self.outputs[(deviceType, index)] = OutputDevice(pin, initial_value=False)
         except Exception as e:
+            if gpio_required():
+                raise RuntimeError(
+                    f"KWEEK_REQUIRE_GPIO=true maar pin {pin} kon niet worden ingesteld "
+                    f"voor {deviceType.value} {index}."
+                ) from e
+
             file_logger.logger.log(MessageSeverity.ERROR, self.__class__.__name__,
                                    f"Kon pin {pin} niet instellen ({e}); "
                                    f"{deviceType.value} {index} draait in simulatiemodus")

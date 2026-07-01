@@ -477,6 +477,31 @@ def test_uart_telemetry_receiver_ignores_command_frames() -> None:
     assert client.uploaded == [_telemetry()]
 
 
+def test_gpio_controller_fails_fast_when_gpio_is_required_but_unavailable(monkeypatch) -> None:
+    import kweekkast_common.gpio.gpio_controller as gpio_controller_module
+
+    monkeypatch.setenv("KWEEK_REQUIRE_GPIO", "true")
+    monkeypatch.setattr(gpio_controller_module, "GPIO_AVAILABLE", False)
+    monkeypatch.setattr(gpio_controller_module, "GPIO_IMPORT_ERROR", ImportError("gpiozero missing"))
+
+    with pytest.raises(RuntimeError, match="KWEEK_REQUIRE_GPIO=true"):
+        gpio_controller_module.GpioController()
+
+
+def test_gpio_controller_fails_fast_when_required_pin_setup_fails(monkeypatch) -> None:
+    import kweekkast_common.gpio.gpio_controller as gpio_controller_module
+
+    def failing_output_device(*args, **kwargs):
+        raise RuntimeError("pin busy")
+
+    monkeypatch.setenv("KWEEK_REQUIRE_GPIO", "true")
+    monkeypatch.setattr(gpio_controller_module, "GPIO_AVAILABLE", True)
+    monkeypatch.setattr(gpio_controller_module, "OutputDevice", failing_output_device)
+
+    with pytest.raises(RuntimeError, match="pin 23"):
+        gpio_controller_module.GpioController()
+
+
 def test_development_style_gpio_control_parsing_still_updates_logical_devices() -> None:
     controller = GpioController()
 

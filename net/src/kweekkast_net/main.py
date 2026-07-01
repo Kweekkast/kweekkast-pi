@@ -12,14 +12,26 @@ from kweekkast_net.module_image_client import ModuleImageClient
 from kweekkast_net.module_telemetry_client import ModuleTelemetryClient
 
 
+def api_token_from_env() -> str:
+    token = os.environ.get("KWEEK_API_TOKEN")
+    if token and token.strip():
+        return token.strip()
+
+    raise SystemExit(
+        "KWEEK_API_TOKEN is required when API endpoints are configured. "
+        "Set it to the Django DRF token."
+    )
+
+
 def main() -> None:
     command_endpoint_url = os.environ.get("KWEEK_ENDPOINT_URL")
     telemetry_endpoint_url = os.environ.get("KWEEK_TELEMETRY_ENDPOINT_URL")
     image_endpoint_url = os.environ.get("KWEEK_IMAGE_ENDPOINT_URL")
-    api_token = os.environ.get("KWEEK_API_TOKEN") or os.environ.get("KWEEKKAST_API_TOKEN")
     allow_insecure_http = os.environ.get("KWEEK_ALLOW_INSECURE_HTTP", "false").lower() == "true"
     if not command_endpoint_url and not telemetry_endpoint_url and not image_endpoint_url:
         raise SystemExit("KWEEK_ENDPOINT_URL, KWEEK_TELEMETRY_ENDPOINT_URL, or KWEEK_IMAGE_ENDPOINT_URL is required.")
+
+    api_token = api_token_from_env()
 
     command_uart_port = os.environ.get("KWEEK_NET_UART_PORT", "/dev/serial0")
     command_baudrate = int(os.environ.get("KWEEK_NET_UART_BAUD", "115200"))
