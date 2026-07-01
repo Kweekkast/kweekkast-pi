@@ -11,7 +11,7 @@ from kweekkast_common.serial_frame_transport import SerialFrameTransport
 from kweekkast_core.communication_component.receiver.uart_module_command_receiver import UartModuleCommandReceiver
 from kweekkast_core.communication_component.transmitter.core_telemetry_transmitter import CoreTelemetryTransmitter
 from kweekkast_core.communication_component.transmitter.core_image_transmitter import CoreImageTransmitter, QueuedImageTransmitter
-from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
+from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler, load_camera_device_ids
 from kweekkast_core.image_capturing.triggers.timer_trigger import TimerTrigger
 
 
@@ -32,7 +32,6 @@ class Main:
         image_transmitter = self._create_image_transmitter(net_uart)
         camera_component_handler = CameraComponentHandler(
             TimerTrigger(float(os.environ.get("KWEEK_CAMERA_INTERVAL_SECONDS", "30"))),
-            int(os.environ.get("KWEEK_CAMERA_COUNT", "3")),
             image_transmitter=image_transmitter,
         )
         camera_component_handler.run()
@@ -80,7 +79,7 @@ class Main:
                 CoreImageTransmitter(
                     serial_connection=serial_connection,
                 ),
-                queue_size=int(os.environ.get("KWEEK_IMAGE_QUEUE_SIZE", "3")),
+                queue_size=self._image_queue_size(),
             )
         except Exception as exc:
             file_logger.logger.log(
@@ -89,6 +88,13 @@ class Main:
                 f"Image UART transmitter niet beschikbaar; beelden worden alleen lokaal opgeslagen: {exc!r}",
             )
             return None
+
+    def _image_queue_size(self) -> int:
+        configured_queue_size = os.environ.get("KWEEK_IMAGE_QUEUE_SIZE")
+        if configured_queue_size:
+            return int(configured_queue_size)
+
+        return len(load_camera_device_ids())
 
     def _create_telemetry_transmitter(self, serial_connection=None):
         if serial_connection is None:

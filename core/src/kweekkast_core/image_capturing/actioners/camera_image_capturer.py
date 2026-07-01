@@ -21,6 +21,7 @@ class CameraImageCapturer(AbstractImageCapturer):
         save_png: bool = True,
         jpeg_quality: int = 80,
         image_size: tuple[int, int] = (640, 480),
+        fps: float = 5,
     ):
         self._capture_device_id = video_capture_device_id
         self.module_id = module_id if module_id is not None else video_capture_device_id + 1
@@ -28,6 +29,7 @@ class CameraImageCapturer(AbstractImageCapturer):
         self.save_png = save_png
         self.jpeg_quality = jpeg_quality
         self.image_size = image_size
+        self.fps = fps
         self._capture_device = capture_device
         if self._capture_device is None:
             self._claim_capture_device()
@@ -39,9 +41,15 @@ class CameraImageCapturer(AbstractImageCapturer):
         except ImportError as exc:
             raise RuntimeError("OpenCV is required for camera image capture. Install opencv-python.") from exc
 
-        self._capture_device = cv2.VideoCapture(self._capture_device_id)
+        self._capture_device = cv2.VideoCapture(self._capture_device_id, cv2.CAP_V4L2)
+        if not self._capture_device.isOpened():
+            self._capture_device.release()
+            self._capture_device = cv2.VideoCapture(self._capture_device_id)
+
+        self._capture_device.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
         self._capture_device.set(cv2.CAP_PROP_FRAME_WIDTH, self.image_size[0])
         self._capture_device.set(cv2.CAP_PROP_FRAME_HEIGHT, self.image_size[1])
+        self._capture_device.set(cv2.CAP_PROP_FPS, self.fps)
 
     def notify(self) -> None:
         try:

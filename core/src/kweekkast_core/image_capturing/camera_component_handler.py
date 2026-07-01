@@ -1,5 +1,4 @@
 from threading import Thread
-import json
 import os
 
 from kweekkast_common.logger_component import file_logger
@@ -8,24 +7,40 @@ from kweekkast_core.image_capturing.actioners.camera_image_capturer import Camer
 
 
 _ENV_SENTINEL = object()
+DEFAULT_CAMERA_DEVICE_IDS = [0, 2, 4]
 
 
 class CameraComponentHandler:
-    def __init__(self, abstract_trigger, cameras: int, *, image_transmitter=None, camera_module_map: dict[int, int] | None = None):
+    def __init__(
+        self,
+        abstract_trigger,
+        *,
+        image_transmitter=None,
+        camera_device_ids: list[int] | None = None,
+    ):
         self._trigger = abstract_trigger
         self._image_capturers = []
-        resolved_camera_module_map = camera_module_map or load_camera_module_map()
+        resolved_camera_device_ids = (
+            list(camera_device_ids)
+            if camera_device_ids is not None
+            else load_camera_device_ids()
+        )
 
-        for camera_id in range(cameras):
+        for module_index, camera_id in enumerate(resolved_camera_device_ids, start=1):
             try:
                 image_capturer = CameraImageCapturer(
                     camera_id,
-                    module_id=resolved_camera_module_map.get(camera_id, camera_id + 1),
+                    module_id=module_index,
                     image_transmitter=image_transmitter,
+                    fps=float(os.environ.get("KWEEK_CAMERA_FPS", "5")),
                 )
                 self._trigger.add_observer(image_capturer)
                 self._image_capturers.append(image_capturer)
-                file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, "An image capturer was added")
+                file_logger.logger.log(
+                    MessageSeverity.DEV,
+                    self.__class__.__name__,
+                    f"Image capturer toegevoegd voor /dev/video{camera_id} -> module {module_index}",
+                )
             except Exception as exc:
                 file_logger.logger.log(
                     MessageSeverity.ERROR,
@@ -44,13 +59,17 @@ class CameraComponentHandler:
             file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, "An image capturer was released")
 
 
-def load_camera_module_map(raw_value=_ENV_SENTINEL) -> dict[int, int]:
-    raw_value = os.environ.get("KWEEK_CAMERA_MODULE_MAP") if raw_value is _ENV_SENTINEL else raw_value
+def load_camera_device_ids(raw_value=_ENV_SENTINEL) -> list[int]:
+    raw_value = os.environ.get("KWEEK_CAMERA_DEVICE_IDS") if raw_value is _ENV_SENTINEL else raw_value
     if not raw_value:
-        return {0: 1, 1: 2, 2: 3}
+        return list(DEFAULT_CAMERA_DEVICE_IDS)
 
-    parsed = json.loads(raw_value)
-    if not isinstance(parsed, dict):
-        raise ValueError("KWEEK_CAMERA_MODULE_MAP must be a JSON object.")
+    device_ids = [int(part.strip()) for part in raw_value.split(",") if part.strip()]
+    if not device_ids:
+        raise ValueError("KWEEK_CAMERA_DEVICE_IDS must contain at least one camera device id.")
+    if len(set(device_ids)) != len(device_ids):
+        raise ValueError("KWEEK_CAMERA_DEVICE_IDS must not contain duplicates.")
+    if any(device_id < 0 for device_id in device_ids):
+        raise ValueError("KWEEK_CAMERA_DEVICE_IDS must contain non-negative integers.")
 
-    return {int(camera_id): int(module_id) for camera_id, module_id in parsed.items()}
+    return device_ids

@@ -46,6 +46,24 @@ def test_core_main_reuses_one_uart_transport_for_net_pi_paths(monkeypatch) -> No
     assert serial_connection.close_count == 1
 
 
+def test_core_main_defaults_image_queue_size_to_camera_device_count(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.delenv("KWEEK_IMAGE_QUEUE_SIZE", raising=False)
+    monkeypatch.setenv("KWEEK_CAMERA_DEVICE_IDS", "0,2,4,6")
+
+    assert core_main_module.Main()._image_queue_size() == 4
+
+
+def test_core_main_allows_explicit_image_queue_size_override(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.setenv("KWEEK_IMAGE_QUEUE_SIZE", "8")
+    monkeypatch.setenv("KWEEK_CAMERA_DEVICE_IDS", "0,2,4")
+
+    assert core_main_module.Main()._image_queue_size() == 8
+
+
 def test_serial_frame_transport_writes_and_flushes_complete_frames() -> None:
     from kweekkast_common.serial_frame_transport import SerialFrameTransport
 

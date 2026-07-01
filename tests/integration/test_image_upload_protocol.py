@@ -19,7 +19,7 @@ from kweekkast_common.net_core_protocol import (
     iter_module_image_chunks,
 )
 from kweekkast_core.image_capturing.actioners.camera_image_capturer import CameraImageCapturer
-from kweekkast_core.image_capturing.camera_component_handler import load_camera_module_map
+from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler, load_camera_device_ids
 from kweekkast_net.communication_component.receiver.uart_module_image_receiver import UartModuleImageReceiver
 from kweekkast_net.module_image_client import ModuleImageClient
 
@@ -113,9 +113,36 @@ def test_core_fake_camera_frame_is_converted_to_jpeg_and_sent() -> None:
     assert transmitter.images[0].jpeg_bytes.startswith(b"\xff\xd8")
 
 
-def test_camera_module_mapping_default_and_env_override() -> None:
-    assert load_camera_module_map(raw_value=None) == {0: 1, 1: 2, 2: 3}
-    assert load_camera_module_map(raw_value='{"0": 3, "1": 2, "2": 1}') == {0: 3, 1: 2, 2: 1}
+def test_camera_device_ids_default_and_env_override() -> None:
+    assert load_camera_device_ids(raw_value=None) == [0, 2, 4]
+    assert load_camera_device_ids(raw_value="0,2,4") == [0, 2, 4]
+
+
+def test_camera_device_ids_reject_invalid_values() -> None:
+    with pytest.raises(ValueError, match="duplicates"):
+        load_camera_device_ids(raw_value="0,2,2")
+
+    with pytest.raises(ValueError, match="non-negative"):
+        load_camera_device_ids(raw_value="0,-1,2")
+
+
+def test_camera_component_handler_maps_modules_by_device_id_order(monkeypatch) -> None:
+    import kweekkast_core.image_capturing.camera_component_handler as camera_component_handler
+
+    monkeypatch.setattr(camera_component_handler, "CameraImageCapturer", FakeCameraImageCapturer)
+    trigger = FakeTrigger()
+
+    CameraComponentHandler(
+        trigger,
+        camera_device_ids=[4, 0, 2],
+        image_transmitter=FakeImageTransmitter(),
+    )
+
+    assert [(capturer._capture_device_id, capturer.module_id) for capturer in trigger.observers] == [
+        (4, 1),
+        (0, 2),
+        (2, 3),
+    ]
 
 
 def test_net_image_receiver_uploads_after_complete_sha256_verified_image() -> None:
@@ -198,6 +225,28 @@ class FakeImageTransmitter:
 
     def send_image(self, image) -> None:
         self.images.append(image)
+
+
+class FakeCameraImageCapturer:
+    def __init__(self, camera_device_id, *, module_id, image_transmitter=None, fps=5):
+        self._capture_device_id = camera_device_id
+        self.module_id = module_id
+        self.image_transmitter = image_transmitter
+        self.fps = fps
+
+    def __del__(self) -> None:
+        pass
+
+
+class FakeTrigger:
+    def __init__(self):
+        self.observers = []
+
+    def add_observer(self, observer) -> None:
+        self.observers.append(observer)
+
+    def remove_observer(self, observer) -> None:
+        self.observers.remove(observer)
 
 
 class FakeImageClient:
