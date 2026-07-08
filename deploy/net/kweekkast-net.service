@@ -1,0 +1,18 @@
+[Unit]
+Description=Kweekkast network Pi
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=kweek
+Group=kweek
+SupplementaryGroups=dialout
+WorkingDirectory=/opt/kweekkast/kweekkast-pi/net
+EnvironmentFile=/etc/kweekkast/net.env
+ExecStart=/opt/kweekkast/kweekkast-pi/net/.venv/bin/kweekkast-net
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

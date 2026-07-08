@@ -1,0 +1,17 @@
+[Unit]
+Description=Kweekkast core Pi
+After=multi-user.target
+
+[Service]
+Type=simple
+User=kweek
+Group=kweek
+SupplementaryGroups=dialout gpio video
+WorkingDirectory=/opt/kweekkast/kweekkast-pi/core
+EnvironmentFile=/etc/kweekkast/core.env
+ExecStart=/opt/kweekkast/kweekkast-pi/core/.venv/bin/kweekkast-core
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
