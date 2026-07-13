@@ -29,9 +29,5 @@ class Receiver(ABC):
                 from kweekkast_core.communication_component.receiver.serial_receiver import SerialReceiver
 
                 return SerialReceiver(communicator, connection)
-            case ConnectionType.WIFI:
-                from kweekkast_net.communication_component.receiver.wifi_receiver import WifiReceiver
-
-                return WifiReceiver(communicator, connection)
             case _:
                 raise ValueError(f"Unknown connection type: {connection.type}")

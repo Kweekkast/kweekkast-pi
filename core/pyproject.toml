@@ -4,7 +4,9 @@ description = "Raspberry Pi responsible for data collection."
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
+    "gpiozero>=2.0.1",
     "kweekkast-common",
+    "lgpio>=0.2.2.0; sys_platform == 'linux' and (platform_machine == 'aarch64' or platform_machine == 'armv7l')",
     "opencv-python>=4.12",
     "pyserial>=3.5",
 ]

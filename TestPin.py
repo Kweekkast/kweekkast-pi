@@ -8,9 +8,6 @@ except ImportError:
     GPIO_AVAILABLE = False
     print("[GpioController] gpiozero niet beschikbaar, simulatiemodus actief")
 
-
-from Esp32.CommunicatorDistributer import CommunicatorDistributer
-
 _PIN           = 4   # GPIO-pin (BCM-nummering), maakt verder niet uit welke
 _CYCLE_SECONDS = 5   # Totale lengte van één cyclus
 _ON_SECONDS    = 1   # Hoe lang de pin aan staat binnen die cyclus

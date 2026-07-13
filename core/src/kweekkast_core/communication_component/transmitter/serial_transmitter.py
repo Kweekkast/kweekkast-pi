@@ -12,4 +12,5 @@ class SerialTransmitter(Transmitter):
     def SendMessage(self, message: str) -> None:
         if self.serial.is_open:
             file_logger.logger.log(MessageSeverity.DEV, self.__class__.__name__, f"Send message back: {message}")
-            self.serial.write(message.encode())
+            self.serial.write(f"{message}\n".encode())
+            self.serial.flush()

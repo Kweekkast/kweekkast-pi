@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from kweekkast_common.communication_component.Subscriber import Subscriber
+from kweekkast_common.communication_component.subscriber import Subscriber
 from kweekkast_common.communication_component.connection import ConnectionDevice
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity

@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_application_entry_points_are_importable() -> None:
     from kweekkast_core.main import main as core_main
     from kweekkast_net.main import main as net_main
@@ -14,7 +17,6 @@ def test_cross_package_factories_are_importable() -> None:
     from kweekkast_common.communication_component.transmitter import Transmitter
     from kweekkast_core.image_capturing.camera_component_handler import CameraComponentHandler
     from kweekkast_core.communication_component.listener.serial_connection_listener import SerialConnectionListener
-    from kweekkast_net.communication_component.connection.wifi_connection import WifiConnection
 
     assert Communicator is not None
     assert Director is not None
@@ -23,4 +25,142 @@ def test_cross_package_factories_are_importable() -> None:
     assert CameraComponentHandler is not None
     assert FileLogger is not None
     assert SerialConnectionListener is not None
-    assert WifiConnection is not None
+
+
+def test_core_main_reuses_one_uart_transport_for_net_pi_paths(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    serial_connection = FakeSerial()
+    monkeypatch.setattr(core_main_module.serial, "Serial", lambda **kwargs: serial_connection)
+    monkeypatch.setenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", '{"test-key":"test-public-key"}')
+
+    main = core_main_module.Main()
+    transport = main._open_net_uart()
+    telemetry_transmitter = main._create_telemetry_transmitter(transport)
+    image_transmitter = main._create_image_transmitter(transport)
+    command_receiver = main._create_command_receiver(transport)
+
+    assert telemetry_transmitter._serial is transport
+    assert image_transmitter.transmitter._serial is transport
+    assert command_receiver._serial is transport
+
+    image_transmitter.close()
+    telemetry_transmitter.close()
+    command_receiver.close()
+    assert serial_connection.close_count == 1
+
+
+def test_net_main_requires_api_token(monkeypatch) -> None:
+    import kweekkast_net.main as net_main_module
+
+    monkeypatch.delenv("KWEEK_API_TOKEN", raising=False)
+
+    with pytest.raises(SystemExit, match="KWEEK_API_TOKEN"):
+        net_main_module.api_token_from_env()
+
+
+def test_net_main_accepts_api_token(monkeypatch) -> None:
+    import kweekkast_net.main as net_main_module
+
+    monkeypatch.setenv("KWEEK_API_TOKEN", " current-token ")
+
+    assert net_main_module.api_token_from_env() == "current-token"
+
+
+def test_core_receiver_requires_public_signing_keys_env(monkeypatch) -> None:
+    from kweekkast_core.communication_component.receiver.uart_module_command_receiver import load_public_keys_from_env
+
+    monkeypatch.delenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+
+    with pytest.raises(ValueError, match="KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON"):
+        load_public_keys_from_env()
+
+
+def test_core_receiver_rejects_empty_public_signing_key_map(monkeypatch) -> None:
+    from kweekkast_core.communication_component.receiver.uart_module_command_receiver import load_public_keys_from_env
+
+    monkeypatch.setenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", "{}")
+
+    with pytest.raises(ValueError, match="at least one public key"):
+        load_public_keys_from_env()
+
+
+def test_core_main_fails_fast_when_command_signing_keys_are_missing(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.delenv("KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON", raising=False)
+
+    with pytest.raises(ValueError, match="KWEEK_CONFIG_SIGNING_PUBLIC_KEYS_JSON"):
+        core_main_module.Main()._create_command_receiver(FakeSerial())
+
+
+def test_core_main_defaults_image_queue_size_to_camera_device_count(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.delenv("KWEEK_IMAGE_QUEUE_SIZE", raising=False)
+    monkeypatch.setenv("KWEEK_CAMERA_DEVICE_IDS", "0,2,4,6")
+
+    assert core_main_module.Main()._image_queue_size() == 4
+
+
+def test_core_main_allows_explicit_image_queue_size_override(monkeypatch) -> None:
+    import kweekkast_core.main as core_main_module
+
+    monkeypatch.setenv("KWEEK_IMAGE_QUEUE_SIZE", "8")
+    monkeypatch.setenv("KWEEK_CAMERA_DEVICE_IDS", "0,2,4")
+
+    assert core_main_module.Main()._image_queue_size() == 8
+
+
+def test_serial_frame_transport_writes_and_flushes_complete_frames() -> None:
+    from kweekkast_common.serial_frame_transport import SerialFrameTransport
+
+    serial_connection = FakeSerial()
+    transport = SerialFrameTransport(serial_connection)
+
+    transport.write_frame(b"frame-1")
+    transport.write_frame(b"frame-2")
+    transport.close()
+    transport.close()
+
+    assert serial_connection.written == [b"frame-1", b"frame-2"]
+    assert serial_connection.flush_count == 2
+    assert serial_connection.close_count == 1
+
+
+def test_core_serial_transmitter_newline_terminates_ack_messages_for_esp() -> None:
+    from kweekkast_core.communication_component.transmitter.serial_transmitter import SerialTransmitter
+
+    serial_connection = FakeConnection()
+    transmitter = SerialTransmitter(serial_connection)
+
+    transmitter.SendMessage("ACK")
+
+    assert serial_connection.serial.written == [b"ACK\n"]
+    assert serial_connection.serial.flush_count == 1
+
+
+class FakeSerial:
+    def __init__(self):
+        self.written = []
+        self.flush_count = 0
+        self.close_count = 0
+        self.is_open = True
+
+    def write(self, data: bytes) -> int:
+        self.written.append(data)
+        return len(data)
+
+    def flush(self) -> None:
+        self.flush_count += 1
+
+    def read(self, size: int) -> bytes:
+        return b""
+
+    def close(self) -> None:
+        self.close_count += 1
+
+
+class FakeConnection:
+    def __init__(self):
+        self.serial = FakeSerial()

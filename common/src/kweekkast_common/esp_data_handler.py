@@ -1,9 +1,9 @@
 from __future__ import annotations
 import json
 
-from kweekkast_common.communication_component.Subscriber import Subscriber
-from kweekkast_common.Gpio.GpioController import GpioController
-from kweekkast_common.Gpio.GpioDevice import GpioDeviceType
+from kweekkast_common.communication_component.subscriber import Subscriber
+from kweekkast_common.gpio.gpio_controller import GpioController
+from kweekkast_common.gpio.gpio_device import GpioDeviceType
 from kweekkast_common.logger_component import file_logger
 from kweekkast_common.logger_component.logger_enum import MessageSeverity
 from kweekkast_common.reading import Reading

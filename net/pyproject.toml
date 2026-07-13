@@ -4,7 +4,9 @@ description = "Raspberry Pi responsible for network communication."
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
-    "kweekkast-common"
+    "httpx>=0.28",
+    "kweekkast-common",
+    "pyserial>=3.5",
 ]
 
 [project.scripts]
