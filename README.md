@@ -69,6 +69,27 @@ Suggested file locations:
 | `.env` files      | /etc/kweekkast                                    |
 | `.service` files  | /etc/systemd/system                               |
 
+### UART link
+Suggested wiring between two Raspberry Pis A and B:
+
+| Pin # A | Pin name A    | Pin # B | Pin name B    |
+|---------|---------------|---------|---------------|
+| 6       | GND           | 6       | GND           |
+| 8       | GPIO 14 (TXD) | 10      | GPIO 15 (RXD) |
+| 10      | GPIO 15 (RXD) | 8       | GPIO 14 (TXD) |
+
+Enable hardware UART:
+
+> `raspi-config`
+
+Configure:
+- Login shell over serial: `No`
+- Hardware serial port: `Yes`
+
+Then ensure that the serial console is disabled and reboot:
+> `systemctl disable --now serial-getty@serial0.service || true`  
+> `reboot`
+
 ### Automation
 Automatically start services on boot (and restart on failure):
 - `systemctl daemon-reload`
@@ -82,7 +103,7 @@ Automate deployment:
 
 ### Hardening
 A non-exhaustive list of recommended security measures:
-- Disable all connectivity on the hosts except for the wired network interface on the network Raspberry Pi.
+- Disable all connectivity on the hosts except for the wired network interface on the network Raspberry Pi and the UART link.
 - Disable root login.
 - Create a service user with limited privileges to run the app.
 - Follow SSH best security practices (prefer keys to complex passwords).
